@@ -21,23 +21,29 @@ Sistema SaaS de controle financeiro pessoal.
 
 ## Desenvolvimento local
 
-### Pré-requisitos
-
-- Node.js 20+
-- pnpm
-- Docker (para PostgreSQL)
-
 ### Setup
 
 ```bash
 cp .env.example .env
 pnpm install
-docker compose up db -d
 pnpm db:generate
 pnpm --filter @financeflow/database migrate:deploy
 pnpm db:seed
 pnpm dev
 ```
+
+**PostgreSQL local:** crie o banco e ajuste `DATABASE_URL` no `.env`:
+
+```sql
+CREATE USER financeflow WITH PASSWORD 'financeflow';
+CREATE DATABASE financeflow OWNER financeflow;
+```
+
+```env
+DATABASE_URL=postgresql://financeflow:financeflow@localhost:5432/financeflow
+```
+
+**Windows + pnpm 11:** se aparecer `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`, o projeto já inclui `minimumReleaseAge: 0` em `pnpm-workspace.yaml`. Atualize o repositório (`git pull`) e rode `pnpm install` de novo.
 
 - Web: http://localhost:3000
 - API: http://localhost:3001/api/v1
