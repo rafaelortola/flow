@@ -43,7 +43,7 @@ CREATE DATABASE financeflow OWNER financeflow;
 DATABASE_URL=postgresql://financeflow:financeflow@localhost:5432/financeflow
 ```
 
-**Windows + pnpm 11:** se aparecer `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`, o projeto já inclui `minimumReleaseAge: 0` em `pnpm-workspace.yaml`. Atualize o repositório (`git pull`) e rode `pnpm install` de novo.
+**Windows + pnpm 11:** se aparecer `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`, faça `git pull` (o projeto já define `minimumReleaseAge: 0`). Se aparecer `ERR_PNPM_IGNORED_BUILDS`, faça `git pull` e rode `pnpm install` de novo — o `allowBuilds` em `pnpm-workspace.yaml` autoriza Prisma, esbuild e sharp.
 
 - Web: http://localhost:3000
 - API: http://localhost:3001/api/v1
