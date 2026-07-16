@@ -1,0 +1,65 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: financeflow
+      POSTGRES_PASSWORD: financeflow
+      POSTGRES_DB: financeflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U financeflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://financeflow:financeflow@db:5432/financeflow
+      JWT_ACCESS_SECRET: change-me-access-secret-min-32-chars
+      JWT_REFRESH_SECRET: change-me-refresh-secret-min-32-chars
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      WEB_ORIGIN: http://localhost:3000
+      PORT: 3001
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+    depends_on:
+      - api
+
+  backup:
+    image: postgres:16-alpine
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: financeflow
+    volumes:
+      - ./backups:/backups
+    entrypoint: /bin/sh
+    command: >
+      -c "while true; do
+        pg_dump -h db -U financeflow financeflow > /backups/backup-$$(date +%Y%m%d-%H%M%S).sql;
+        find /backups -name 'backup-*.sql' -mtime +7 -delete;
+        sleep 86400;
+      done"
+
+volumes:
+  postgres_data:
