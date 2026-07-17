@@ -1,14 +1,20 @@
 # FinanceFlow v2
 
-Projeto **simples**: HTML + CSS + JavaScript + Node.js + PostgreSQL.
+Controle financeiro pessoal baseado na planilha **Planejamento Financeiro 2026**.
 
-Sem monorepo, sem Next.js, sem NestJS, sem Prisma.
+**Stack:** HTML + CSS + JavaScript + Node.js + PostgreSQL
 
-## Stack
+## Funcionalidades
 
-- **Frontend:** HTML, CSS, JavaScript (pasta `public/`)
-- **Backend:** Node.js + Express (`server.js`)
-- **Banco:** PostgreSQL (`financeflow`)
+- Login com JWT
+- **Dashboard anual** — resumo dos 12 meses + gráfico de sobra
+- **Controle mensal** — clone funcional da aba mensal da planilha:
+  - Recebíveis (Biz, EDS, DB4SERV, etc.)
+  - Gastos Fixos Essenciais / Não Essenciais
+  - Gastos de Dívidas e Cartões
+  - Planejamento (notas do mês)
+  - Marcar Pago/Não pago com um clique
+- **Importação** dos dados de Junho/2026 da planilha original
 
 ## Setup (Windows)
 
@@ -19,22 +25,21 @@ copy .env.example .env
 notepad .env
 ```
 
-Coloque a senha do **postgres**:
-
 ```env
 DATABASE_URL=postgresql://postgres:SUA_SENHA@localhost:5432/financeflow
 JWT_SECRET=change-me-jwt-secret-min-32-characters
 PORT=3000
 ```
 
-### 2. Instale e prepare o banco
+### 2. Instale, crie tabelas e importe a planilha
 
 ```powershell
 npm install
 npm run setup
+npm run import
 ```
 
-### 3. Rode o projeto
+### 3. Rode
 
 ```powershell
 npm run dev
@@ -42,25 +47,46 @@ npm run dev
 
 Abra: **http://localhost:3000**
 
-### Login demo
+**Login demo:** `demo@financeflow.com` / `demo123456`
 
-- **Email:** `demo@financeflow.com`
-- **Senha:** `demo123456`
+## Navegação
+
+| Página | URL |
+|--------|-----|
+| Login | `/` |
+| Dashboard anual | `/dashboard.html` |
+| Controle mensal | `/mes.html` |
+
+## API
+
+| Rota | Descrição |
+|------|-----------|
+| `POST /api/login` | Login |
+| `GET /api/dashboard/year?year=2026` | Resumo anual |
+| `GET /api/dashboard/month?month=6&year=2026` | Resumo mensal |
+| `GET/POST/PATCH/DELETE /api/incomes` | Recebíveis |
+| `GET/POST/PATCH/DELETE /api/expenses` | Despesas |
+| `PATCH /api/expenses/:id/status` | Alternar status |
+| `GET/PUT /api/notes` | Notas de planejamento |
+| `GET /api/categories` | Categorias |
 
 ## Estrutura
 
 ```
-public/          HTML, CSS, JS
-server.js        API + serve arquivos estáticos
-db.js            Conexão PostgreSQL
-scripts/         setup-db.js
+public/           HTML, CSS, JS
+routes/           API (auth, incomes, expenses, dashboard...)
+scripts/
+  setup-db.js     Cria schema + categorias + demo
+  import-spreadsheet.js  Importa Junho/2026
+data/
+  planilha-modelo.xlsx   Planilha original
+server.js           Servidor Express
+db.js               PostgreSQL
 ```
 
-## API
+## Fase 2 (próximos módulos)
 
-| Rota | Método | Descrição |
-|------|--------|-----------|
-| `/api/health` | GET | Testa servidor + banco |
-| `/api/login` | POST | Login (email + senha) |
-| `/api/me` | GET | Usuário logado |
-| `/api/dashboard` | GET | Resumo financeiro |
+- FIIs / investimentos
+- Pet, DARF, Lista de Desejos
+- Import Julho–Dezembro
+- Planejado vs Real (Mostruário)
