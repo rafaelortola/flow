@@ -8,6 +8,17 @@ const MONTHS = [
 ];
 
 const yearSelect = document.getElementById('yearSelect');
+const reportError = document.getElementById('reportError');
+
+function showError(message) {
+  reportError.textContent = message;
+  reportError.classList.remove('hidden');
+}
+
+function clearError() {
+  reportError.textContent = '';
+  reportError.classList.add('hidden');
+}
 
 function formatMoney(v) {
   return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -73,55 +84,64 @@ function renderTableBody(id, rows, emptyMessage = 'Sem dados.') {
 }
 
 async function loadReports() {
+  clearError();
   const year = parseInt(yearSelect.value, 10);
   document.getElementById('yearLabel').textContent = year;
 
-  const data = await api(`/reports?year=${year}`);
+  try {
+    const data = await api(`/reports?year=${year}`);
 
-  document.getElementById('totalReceitas').textContent = formatMoney(data.totals.receitas);
-  document.getElementById('totalDespesas').textContent = formatMoney(data.totals.despesas);
-  const sobraEl = document.getElementById('totalSobra');
-  sobraEl.textContent = formatMoney(data.totals.sobra);
-  sobraEl.className = `value ${data.totals.sobra >= 0 ? 'text-green' : 'text-red'}`;
+    document.getElementById('totalReceitas').textContent = formatMoney(data.totals.receitas);
+    document.getElementById('totalDespesas').textContent = formatMoney(data.totals.despesas);
+    const sobraEl = document.getElementById('totalSobra');
+    sobraEl.textContent = formatMoney(data.totals.sobra);
+    sobraEl.className = `value ${data.totals.sobra >= 0 ? 'text-green' : 'text-red'}`;
 
-  renderMonthlyChart(data.months);
-  renderRankedBars('topCategoriesChart', data.topCategories, 'category');
-  renderRankedBars('groupsChart', data.groups, 'label');
+    renderMonthlyChart(data.months);
+    renderRankedBars('topCategoriesChart', data.topCategories, 'category');
+    renderRankedBars('groupsChart', data.groups, 'label');
 
-  renderTableBody('categoriesTable', data.categories.map((item) => `
-    <tr>
-      <td>${item.category}</td>
-      <td>${formatMoney(item.total)}</td>
-      <td>${formatPercent(item.percent)}</td>
-      <td>${item.count}</td>
-    </tr>
-  `).join(''));
+    renderTableBody('categoriesTable', data.categories.map((item) => `
+      <tr>
+        <td>${item.category}</td>
+        <td>${formatMoney(item.total)}</td>
+        <td>${formatPercent(item.percent)}</td>
+        <td>${item.count}</td>
+      </tr>
+    `).join(''));
 
-  renderTableBody('monthsTable', data.months.map((m, i) => `
-    <tr>
-      <td>${MONTHS[i]}</td>
-      <td>${formatMoney(m.receitas)}</td>
-      <td>${formatMoney(m.despesas)}</td>
-      <td class="${m.sobra >= 0 ? 'text-green' : 'text-red'}">${formatMoney(m.sobra)}</td>
-      <td><a class="btn-link" href="/mes.html?month=${m.month}&year=${year}">Abrir mês</a></td>
-    </tr>
-  `).join(''));
+    renderTableBody('monthsTable', data.months.map((m, i) => `
+      <tr>
+        <td>${MONTHS[i]}</td>
+        <td>${formatMoney(m.receitas)}</td>
+        <td>${formatMoney(m.despesas)}</td>
+        <td class="${m.sobra >= 0 ? 'text-green' : 'text-red'}">${formatMoney(m.sobra)}</td>
+        <td><a class="btn-link" href="/mes.html?month=${m.month}&year=${year}">Abrir mês</a></td>
+      </tr>
+    `).join(''));
 
-  renderTableBody('incomeCategoriesTable', data.incomeCategories.map((item) => `
-    <tr>
-      <td>${item.category}</td>
-      <td>${formatMoney(item.total)}</td>
-      <td>${item.count}</td>
-    </tr>
-  `).join(''), 'Sem receitas categorizadas.');
+    renderTableBody('incomeCategoriesTable', data.incomeCategories.map((item) => `
+      <tr>
+        <td>${item.category}</td>
+        <td>${formatMoney(item.total)}</td>
+        <td>${item.count}</td>
+      </tr>
+    `).join(''), 'Sem receitas categorizadas.');
 
-  renderTableBody('incomeSourcesTable', data.incomeSources.map((item) => `
-    <tr>
-      <td>${item.source}</td>
-      <td>${formatMoney(item.total)}</td>
-      <td>${item.count}</td>
-    </tr>
-  `).join(''), 'Sem receitas no período.');
+    renderTableBody('incomeSourcesTable', data.incomeSources.map((item) => `
+      <tr>
+        <td>${item.source}</td>
+        <td>${formatMoney(item.total)}</td>
+        <td>${item.count}</td>
+      </tr>
+    `).join(''), 'Sem receitas no período.');
+  } catch (err) {
+    if (err.status === 401) {
+      logout();
+      return;
+    }
+    showError(err.message || 'Erro ao carregar relatórios. Reinicie o servidor (npm start) e tente novamente.');
+  }
 }
 
 yearSelect.addEventListener('change', loadReports);
@@ -132,10 +152,12 @@ async function init() {
   try {
     const user = await api('/me');
     document.getElementById('userGreeting').textContent = user.name || user.email;
-    await loadReports();
-  } catch {
-    logout();
+  } catch (err) {
+    if (err.status === 401) logout();
+    else showError(err.message || 'Erro ao validar sessão.');
+    return;
   }
+  await loadReports();
 }
 
 init();

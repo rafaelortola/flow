@@ -14,6 +14,35 @@ const GROUP_LABELS = {
   card: 'Cartões',
 };
 
+async function fetchIncomeByCategory(userId, year) {
+  try {
+    const result = await db.query(
+      `SELECT COALESCE(NULLIF(TRIM(category), ''), 'Sem categoria') AS category,
+              SUM(amount)::float AS total,
+              COUNT(*)::int AS count
+       FROM incomes
+       WHERE "userId" = $1 AND year = $2
+       GROUP BY 1
+       ORDER BY total DESC`,
+      [userId, year],
+    );
+    return result.rows;
+  } catch (err) {
+    if (!/column "category"/i.test(err.message)) throw err;
+    const result = await db.query(
+      `SELECT source AS category,
+              SUM(amount)::float AS total,
+              COUNT(*)::int AS count
+       FROM incomes
+       WHERE "userId" = $1 AND year = $2
+       GROUP BY source
+       ORDER BY total DESC`,
+      [userId, year],
+    );
+    return result.rows;
+  }
+}
+
 function reportsRoutes(authMiddleware) {
   const router = express.Router();
   router.use(authMiddleware);
@@ -53,16 +82,7 @@ function reportsRoutes(authMiddleware) {
          ORDER BY total DESC`,
         [userId, year],
       ),
-      db.query(
-        `SELECT COALESCE(NULLIF(TRIM(category), ''), 'Sem categoria') AS category,
-                SUM(amount)::float AS total,
-                COUNT(*)::int AS count
-         FROM incomes
-         WHERE "userId" = $1 AND year = $2
-         GROUP BY 1
-         ORDER BY total DESC`,
-        [userId, year],
-      ),
+      fetchIncomeByCategory(userId, year),
       db.query(
         `SELECT source,
                 SUM(amount)::float AS total,
@@ -136,7 +156,7 @@ function reportsRoutes(authMiddleware) {
         count: Number(row.count),
         percent: totals.despesas > 0 ? (Number(row.total) / totals.despesas) * 100 : 0,
       })),
-      incomeCategories: incomeByCategory.rows.map((row) => ({
+      incomeCategories: incomeByCategory.map((row) => ({
         category: row.category,
         total: Number(row.total),
         count: Number(row.count),
