@@ -81,6 +81,8 @@ export async function apiFetch<T>(
   if (res.status === 204) return undefined as T;
   return res.json();
 }
+
+export async function apiDownload(path: string, filename: string) {
   const token = getAccessToken();
   const res = await fetch(`${API_URL}${path}`, {
     credentials: 'include',
