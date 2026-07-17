@@ -11,7 +11,9 @@
     "db:migrate": "pnpm --filter @financeflow/database migrate",
     "db:seed": "pnpm --filter @financeflow/database seed",
     "mcp:postgres": "node scripts/mcp-postgres.js",
-    "mcp:postgres:check": "node scripts/mcp-postgres.js --check"
+    "mcp:postgres:check": "node scripts/mcp-postgres.js --check",
+    "validate": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validate.ps1",
+    "setup:all": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-all.ps1"
   },
   "devDependencies": {
     "@modelcontextprotocol/server-postgres": "^0.6.2",
