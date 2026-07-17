@@ -147,6 +147,11 @@ async function ensureSchema() {
     console.log('OK: tabela expenses criada');
   }
 
+  if (!(await columnExists('expenses', 'category'))) {
+    await pool.query(`ALTER TABLE expenses ADD COLUMN category TEXT`);
+    console.log('OK: coluna expenses.category adicionada');
+  }
+
   if (!(await tableExists('monthly_notes'))) {
     await pool.query(`
       CREATE TABLE monthly_notes (

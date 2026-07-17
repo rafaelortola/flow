@@ -14,6 +14,41 @@ const GROUP_LABELS = {
   card: 'Cartões',
 };
 
+function isMissingColumnError(err, column) {
+  if (err.code === '42703') return true;
+  const msg = String(err.message || '');
+  return msg.includes(column) && (/não existe/i.test(msg) || /does not exist/i.test(msg));
+}
+
+async function fetchExpensesByCategory(userId, year) {
+  try {
+    const result = await db.query(
+      `SELECT COALESCE(NULLIF(TRIM(category), ''), 'Sem categoria') AS category,
+              SUM(amount)::float AS total,
+              COUNT(*)::int AS count
+       FROM expenses
+       WHERE "userId" = $1 AND year = $2
+       GROUP BY 1
+       ORDER BY total DESC`,
+      [userId, year],
+    );
+    return result.rows;
+  } catch (err) {
+    if (!isMissingColumnError(err, 'category')) throw err;
+    const result = await db.query(
+      `SELECT name AS category,
+              SUM(amount)::float AS total,
+              COUNT(*)::int AS count
+       FROM expenses
+       WHERE "userId" = $1 AND year = $2
+       GROUP BY name
+       ORDER BY total DESC`,
+      [userId, year],
+    );
+    return result.rows;
+  }
+}
+
 async function fetchIncomeByCategory(userId, year) {
   try {
     const result = await db.query(
@@ -28,7 +63,7 @@ async function fetchIncomeByCategory(userId, year) {
     );
     return result.rows;
   } catch (err) {
-    if (!/column "category"/i.test(err.message)) throw err;
+    if (!isMissingColumnError(err, 'category')) throw err;
     const result = await db.query(
       `SELECT source AS category,
               SUM(amount)::float AS total,
@@ -52,16 +87,7 @@ function reportsRoutes(authMiddleware) {
     const userId = req.user.sub;
 
     const [byCategory, byMonth, byGroup, incomeByCategory, incomeBySource, monthlyDetail] = await Promise.all([
-      db.query(
-        `SELECT COALESCE(NULLIF(TRIM(category), ''), 'Sem categoria') AS category,
-                SUM(amount)::float AS total,
-                COUNT(*)::int AS count
-         FROM expenses
-         WHERE "userId" = $1 AND year = $2
-         GROUP BY 1
-         ORDER BY total DESC`,
-        [userId, year],
-      ),
+      fetchExpensesByCategory(userId, year),
       db.query(
         `SELECT month,
                 SUM(amount)::float AS despesas,
@@ -126,7 +152,7 @@ function reportsRoutes(authMiddleware) {
       { receitas: 0, despesas: 0, sobra: 0 },
     );
 
-    const topCategories = byCategory.rows.slice(0, 10).map((row) => ({
+    const topCategories = byCategory.slice(0, 10).map((row) => ({
       category: row.category,
       total: Number(row.total),
       count: Number(row.count),
@@ -138,7 +164,7 @@ function reportsRoutes(authMiddleware) {
       totals,
       months,
       topCategories,
-      categories: byCategory.rows.map((row) => ({
+      categories: byCategory.map((row) => ({
         category: row.category,
         total: Number(row.total),
         count: Number(row.count),
