@@ -10,7 +10,8 @@
     "db:generate": "pnpm --filter @financeflow/database generate",
     "db:migrate": "pnpm --filter @financeflow/database migrate",
     "db:seed": "pnpm --filter @financeflow/database seed",
-    "mcp:postgres": "node scripts/mcp-postgres.js"
+    "mcp:postgres": "node scripts/mcp-postgres.js",
+    "mcp:postgres:check": "node scripts/mcp-postgres.js --check"
   },
   "devDependencies": {
     "typescript": "^5.7.3"

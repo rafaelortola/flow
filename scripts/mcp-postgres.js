@@ -1,15 +1,17 @@
 /**
- * Starts the official Postgres MCP server using DATABASE_URL from the project .env
- * so credentials are not duplicated in mcp.json.
+ * Starts the official Postgres MCP server using DATABASE_URL from the project .env.
+ * Usage:
+ *   node scripts/mcp-postgres.js         # start MCP (stdio, for Cursor)
+ *   node scripts/mcp-postgres.js --check  # validate config only
  */
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
-const envPath = path.join(__dirname, '..', '.env');
-
-if (fs.existsSync(envPath)) {
-  for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
+function loadEnvFile(filePath) {
+  if (!fs.existsSync(filePath)) return;
+  const content = fs.readFileSync(filePath, 'utf8').replace(/^\uFEFF/, '');
+  for (const line of content.split('\n')) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
     const eq = trimmed.indexOf('=');
@@ -26,19 +28,64 @@ if (fs.existsSync(envPath)) {
   }
 }
 
+function maskDatabaseUrl(url) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.password) parsed.password = '****';
+    return parsed.toString();
+  } catch {
+    return '(invalid URL)';
+  }
+}
+
+const projectRoot = path.join(__dirname, '..');
+loadEnvFile(path.join(projectRoot, '.env'));
+
 const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) {
-  console.error(
-    'DATABASE_URL not found. Copy .env.example to .env and set your Postgres connection string.',
-  );
+  console.error('ERROR: DATABASE_URL not found.');
+  console.error(`Expected file: ${path.join(projectRoot, '.env')}`);
+  console.error('Run: copy .env.example .env');
+  console.error('Then set DATABASE_URL=postgresql://user:pass@localhost:5432/financeflow');
   process.exit(1);
 }
 
+if (process.argv.includes('--check')) {
+  console.log('OK: DATABASE_URL loaded ->', maskDatabaseUrl(databaseUrl));
+  console.log('Project root ->', projectRoot);
+  process.exit(0);
+}
+
+console.error('Starting Postgres MCP server...');
+console.error('Database ->', maskDatabaseUrl(databaseUrl));
+console.error('(Process stays open for Cursor MCP. Press Ctrl+C to stop.)');
+
 const result = spawnSync(
-  process.platform === 'win32' ? 'npx.cmd' : 'npx',
+  'npx',
   ['-y', '@modelcontextprotocol/server-postgres', databaseUrl],
-  { stdio: 'inherit', env: process.env },
+  {
+    stdio: 'inherit',
+    env: process.env,
+    shell: true,
+    windowsHide: true,
+  },
 );
 
-process.exit(result.status ?? 1);
+if (result.error) {
+  console.error('ERROR: Failed to start npx:', result.error.message);
+  process.exit(1);
+}
+
+if (result.status !== 0 && result.status !== null) {
+  console.error(`ERROR: MCP server exited with code ${result.status}`);
+  if (result.status === 1) {
+    console.error('Tips:');
+    console.error('- Is PostgreSQL running?');
+    console.error('- Is DATABASE_URL correct in .env?');
+    console.error('- Try: node scripts/mcp-postgres.js --check');
+  }
+  process.exit(result.status);
+}
+
+process.exit(0);
