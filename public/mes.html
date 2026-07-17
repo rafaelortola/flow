@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinanceFlow — Mês</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo small">FF</div>
+        <span>FinanceFlow</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/dashboard.html">Dashboard</a>
+        <a href="/mes.html" class="active">Controle Mensal</a>
+      </nav>
+      <button id="logoutBtn" class="btn-outline sidebar-logout">Sair</button>
+    </aside>
+
+    <div class="content">
+      <header class="content-header">
+        <div>
+          <h1>Controle Mensal</h1>
+          <p class="subtitle" id="userGreeting">...</p>
+        </div>
+        <div class="period-select">
+          <select id="monthSelect"></select>
+          <select id="yearSelect"></select>
+          <button id="reloadBtn" class="btn-primary">Atualizar</button>
+        </div>
+      </header>
+
+      <div class="stats stats-4">
+        <div class="stat green">
+          <span class="label">Receita Bruta</span>
+          <span class="value" id="receitaBruta">R$ 0,00</span>
+        </div>
+        <div class="stat red">
+          <span class="label">Total Despesas</span>
+          <span class="value" id="totalDespesas">R$ 0,00</span>
+        </div>
+        <div class="stat blue">
+          <span class="label">Tendência de Sobra</span>
+          <span class="value" id="tendenciaSobra">R$ 0,00</span>
+        </div>
+        <div class="stat purple">
+          <span class="label">Cartões</span>
+          <span class="value" id="gastosCartoes">R$ 0,00</span>
+        </div>
+      </div>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Recebíveis</h2>
+          <button class="btn-primary btn-sm" id="addIncomeBtn">+ Recebível</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Fonte</th><th>Valor</th><th></th></tr></thead>
+            <tbody id="incomesTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Planejamento</h2>
+        </div>
+        <textarea id="notesArea" rows="4" placeholder="Notas do mês..."></textarea>
+        <button id="saveNotesBtn" class="btn-outline btn-sm" style="margin-top:0.5rem">Salvar notas</button>
+      </section>
+
+      <section class="panel expense-section" data-group="essential">
+        <div class="panel-header">
+          <h2>Gastos Fixos Essenciais <span class="section-total" id="total-essential"></span></h2>
+          <button class="btn-primary btn-sm add-expense-btn" data-group="essential">+ Despesa</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr>
+          <th>Venc.</th><th>Nome</th><th>Valor</th><th>Categoria</th><th>Status</th><th></th>
+        </tr></thead><tbody id="expenses-essential"></tbody></table></div>
+      </section>
+
+      <section class="panel expense-section" data-group="nonessential">
+        <div class="panel-header">
+          <h2>Gastos Fixos Não Essenciais <span class="section-total" id="total-nonessential"></span></h2>
+          <button class="btn-primary btn-sm add-expense-btn" data-group="nonessential">+ Despesa</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr>
+          <th>Venc.</th><th>Nome</th><th>Valor</th><th>Categoria</th><th>Status</th><th></th>
+        </tr></thead><tbody id="expenses-nonessential"></tbody></table></div>
+      </section>
+
+      <section class="panel expense-section" data-group="debt">
+        <div class="panel-header">
+          <h2>Gastos de Dívidas <span class="section-total" id="total-debt"></span></h2>
+          <button class="btn-primary btn-sm add-expense-btn" data-group="debt">+ Despesa</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr>
+          <th>Venc.</th><th>Nome</th><th>Valor</th><th>Categoria</th><th>Status</th><th></th>
+        </tr></thead><tbody id="expenses-debt"></tbody></table></div>
+      </section>
+
+      <section class="panel expense-section" data-group="card">
+        <div class="panel-header">
+          <h2>Gastos de Cartão <span class="section-total" id="total-card"></span></h2>
+          <button class="btn-primary btn-sm add-expense-btn" data-group="card">+ Despesa</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr>
+          <th>Venc.</th><th>Nome</th><th>Valor</th><th>Categoria</th><th>Status</th><th></th>
+        </tr></thead><tbody id="expenses-card"></tbody></table></div>
+      </section>
+    </div>
+  </div>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-content">
+      <h3 id="modalTitle">Nova despesa</h3>
+      <form id="modalForm">
+        <input type="hidden" id="modalId" />
+        <input type="hidden" id="modalType" value="expense" />
+        <input type="hidden" id="modalGroup" />
+
+        <div id="expenseFields">
+          <label>Vencimento<input type="date" id="fDueDate" /></label>
+          <label>Nome<input type="text" id="fName" required /></label>
+          <label>Valor<input type="number" id="fAmount" step="0.01" required /></label>
+          <label>Categoria<select id="fCategory"></select></label>
+          <label>Tipo de gasto<select id="fSpendingType"></select></label>
+          <label>Tipo da dívida<select id="fDebtType"></select></label>
+          <label>Parcelado<input type="text" id="fInstallment" placeholder="ex: 2 de" /></label>
+          <label>Status<select id="fStatus"></select></label>
+        </div>
+
+        <div id="incomeFields" class="hidden">
+          <label>Fonte<input type="text" id="fSource" placeholder="Biz, EDS..." required /></label>
+          <label>Valor<input type="text" id="fIncomeAmount" inputmode="numeric" placeholder="R$ 0,00" required /></label>
+        </div>
+
+        <p id="modalError" class="error hidden" role="alert"></p>
+
+        <div class="modal-actions">
+          <button type="button" id="modalCancel" class="btn-outline">Cancelar</button>
+          <button type="submit" id="modalSubmitBtn" class="btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/money.js"></script>
+  <script src="/js/mes.js"></script>
+</body>
+</html>

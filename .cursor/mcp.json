@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "financeflow-postgres": {
-      "command": "node",
-      "args": ["scripts/mcp-postgres.js"]
-    }
-  }
-}

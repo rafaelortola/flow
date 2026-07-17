@@ -1,9 +1,4 @@
-node_modules
-dist
-.next
+node_modules/
 .env
-.env.local
 *.log
-coverage
-.turbo
-backups/*.sql
+.DS_Store

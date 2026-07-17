@@ -1,0 +1,17 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/(auth)/login/page": "app/(auth)/login/page.js",
+  "/(auth)/register/page": "app/(auth)/register/page.js",
+  "/page": "app/page.js",
+  "/(dashboard)/caixa/page": "app/(dashboard)/caixa/page.js",
+  "/(dashboard)/categorias/page": "app/(dashboard)/categorias/page.js",
+  "/(dashboard)/despesas/page": "app/(dashboard)/despesas/page.js",
+  "/(dashboard)/dashboard/page": "app/(dashboard)/dashboard/page.js",
+  "/(dashboard)/dividas/page": "app/(dashboard)/dividas/page.js",
+  "/(dashboard)/investimentos/page": "app/(dashboard)/investimentos/page.js",
+  "/(dashboard)/parcelamentos/page": "app/(dashboard)/parcelamentos/page.js",
+  "/(dashboard)/perfil/page": "app/(dashboard)/perfil/page.js",
+  "/(dashboard)/receitas/page": "app/(dashboard)/receitas/page.js",
+  "/(dashboard)/relatorios/page": "app/(dashboard)/relatorios/page.js"
+}

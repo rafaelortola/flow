@@ -1,118 +1,106 @@
-# FinanceFlow
+# FinanceFlow v2
 
-Sistema SaaS de controle financeiro pessoal.
+Controle financeiro pessoal baseado na planilha **Planejamento Financeiro 2026**.
 
-## Stack
+**Stack:** HTML + CSS + JavaScript + Node.js + PostgreSQL
 
-- **Frontend:** Next.js 15, TypeScript, Tailwind CSS, shadcn-style UI
-- **Backend:** NestJS REST API
-- **Database:** PostgreSQL + Prisma
-- **Auth:** JWT + Refresh Token (HttpOnly cookie)
+## Funcionalidades
 
-## Módulos
+- Login com JWT
+- **Dashboard anual** — resumo dos 12 meses + gráfico de sobra
+- **Controle mensal** — clone funcional da aba mensal da planilha:
+  - Recebíveis (Biz, EDS, DB4SERV, etc.)
+  - Gastos Fixos Essenciais / Não Essenciais
+  - Gastos de Dívidas e Cartões
+  - Planejamento (notas do mês)
+  - Marcar Pago/Não pago com um clique
+- **Importação** dos dados de Junho/2026 da planilha original
 
-- Login / Cadastro
-- Dashboard
-- Receitas, Despesas, Categorias
-- Dívidas, Parcelamentos
-- Investimentos, Caixa
-- Relatórios (PDF, Excel, CSV)
-- Perfil
+## Setup (Windows)
 
-## Desenvolvimento local
-
-### Pré-requisitos
-
-- Node.js 20+
-- pnpm (`npm install -g pnpm`)
-- PostgreSQL local (sem Docker)
-
-### Windows — conectar BD de uma vez
-
-**Opcao A — so rodar `pnpm dev` (mais facil)**
-
-1. Abra o `.env` e adicione a senha do postgres:
-   ```env
-   POSTGRES_ADMIN_PASSWORD=SUA_SENHA_DO_POSTGRES
-   ```
-2. Rode:
-   ```powershell
-   git pull origin main
-   pnpm install
-   pnpm dev
-   ```
-   Na primeira vez, o projeto **cria sozinho** o usuario/banco `financeflow`.
-
-**Opcao B — script completo**
+### 1. Configure o `.env`
 
 ```powershell
-.\scripts\setup-all.ps1 -PostgresPassword "SUA_SENHA_DO_POSTGRES"
-```
-
-**Login:** `demo@financeflow.com` / `demo123456`
-
-### Setup manual (passo a passo)
-
-```bash
-cp .env.example .env
-pnpm install
-pnpm --filter @financeflow/database migrate:deploy
-pnpm db:seed
-pnpm dev
-```
-
-> `pnpm install` e `pnpm dev` já rodam `prisma generate` automaticamente. Se a API acusar que `@financeflow/database` não existe, rode: `pnpm db:prepare`
-
-**PostgreSQL local:** crie o banco e ajuste `DATABASE_URL` no `.env`:
-
-```sql
-CREATE USER financeflow WITH PASSWORD 'financeflow';
-CREATE DATABASE financeflow OWNER financeflow;
+copy .env.example .env
+notepad .env
 ```
 
 ```env
-DATABASE_URL=postgresql://financeflow:financeflow@localhost:5432/financeflow
+DATABASE_URL=postgresql://postgres:SUA_SENHA@localhost:5432/financeflow
+JWT_SECRET=change-me-jwt-secret-min-32-characters
+PORT=3000
 ```
 
-**Failed to fetch:** quase sempre a API não está rodando ou CORS bloqueou a porta do frontend. Confira se `apps/api` subiu em http://localhost:3001/api/v1. Se o Next.js usar outra porta (ex.: 3002), reinicie com `pnpm dev` após `git pull` (CORS em dev aceita qualquer porta localhost).
+### 2. Instale, crie tabelas e importe a planilha
 
-- Web: http://localhost:3000
-- API: http://localhost:3001/api/v1
-
-### Usuário demo
-
-- Email: `demo@financeflow.com`
-- Senha: `demo123456`
-
-## MCP Postgres (Cursor Desktop)
-
-Para a IA consultar seu Postgres local diretamente no Cursor, veja [docs/MCP-POSTGRES.md](docs/MCP-POSTGRES.md).
-
-Configuração rápida: `.env` com `DATABASE_URL` → Settings → MCP → ativar `financeflow-postgres`.
-
-## Docker (stack completa)
-
-```bash
-docker compose up --build
+```powershell
+npm install
+npm run setup
+npm run import
 ```
 
-Inclui serviço de backup automático (`pg_dump` diário em `./backups`).
+### 3. Rode
 
-## Testes
-
-```bash
-docker compose up db -d
-pnpm --filter @financeflow/database migrate:deploy
-pnpm test
-pnpm --filter @financeflow/api test:e2e
+```powershell
+git pull origin main
+npm install
+npm run dev
 ```
+
+Abra: **http://localhost:3000/mes.html**
+
+**Login demo:** `demo@financeflow.com` / `demo123456`
+
+### Porta 3000 ocupada?
+
+Se aparecer `EADDRINUSE`, outro Node ainda está rodando. No PowerShell:
+
+```powershell
+netstat -ano | findstr :3000
+taskkill /PID <PID> /F
+npm run dev
+```
+
+Ou use outra porta no `.env`: `PORT=3002`
+
+## Navegação
+
+| Página | URL |
+|--------|-----|
+| Login | `/` |
+| Dashboard anual | `/dashboard.html` |
+| Controle mensal | `/mes.html` |
+
+## API
+
+| Rota | Descrição |
+|------|-----------|
+| `POST /api/login` | Login |
+| `GET /api/dashboard/year?year=2026` | Resumo anual |
+| `GET /api/dashboard/month?month=6&year=2026` | Resumo mensal |
+| `GET/POST/PATCH/DELETE /api/incomes` | Recebíveis |
+| `GET/POST/PATCH/DELETE /api/expenses` | Despesas |
+| `PATCH /api/expenses/:id/status` | Alternar status |
+| `GET/PUT /api/notes` | Notas de planejamento |
+| `GET /api/categories` | Categorias |
 
 ## Estrutura
 
 ```
-apps/
-  api/     NestJS backend
-  web/     Next.js frontend
-packages/
-  database/  Prisma schema e client
+public/           HTML, CSS, JS
+routes/           API (auth, incomes, expenses, dashboard...)
+scripts/
+  setup-db.js     Cria schema + categorias + demo
+  import-spreadsheet.js  Importa Junho/2026
+data/
+  planilha-modelo.xlsx   Planilha original
+server.js           Servidor Express
+db.js               PostgreSQL
 ```
+
+## Fase 2 (próximos módulos)
+
+- FIIs / investimentos
+- Pet, DARF, Lista de Desejos
+- Import Julho–Dezembro
+- Planejado vs Real (Mostruário)

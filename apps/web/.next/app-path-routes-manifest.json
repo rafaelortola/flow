@@ -1,0 +1,17 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/favicon.ico/route": "/favicon.ico",
+  "/(auth)/login/page": "/login",
+  "/(auth)/register/page": "/register",
+  "/page": "/",
+  "/(dashboard)/caixa/page": "/caixa",
+  "/(dashboard)/categorias/page": "/categorias",
+  "/(dashboard)/despesas/page": "/despesas",
+  "/(dashboard)/dashboard/page": "/dashboard",
+  "/(dashboard)/dividas/page": "/dividas",
+  "/(dashboard)/investimentos/page": "/investimentos",
+  "/(dashboard)/parcelamentos/page": "/parcelamentos",
+  "/(dashboard)/perfil/page": "/perfil",
+  "/(dashboard)/receitas/page": "/receitas",
+  "/(dashboard)/relatorios/page": "/relatorios"
+}
