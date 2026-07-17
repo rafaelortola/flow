@@ -112,6 +112,67 @@ function categoryRoutes(authMiddleware) {
     res.status(201).json(result.rows[0]);
   }));
 
+  router.patch('/:id', asyncHandler(async (req, res) => {
+    const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+    const type = typeof req.body?.type === 'string' ? req.body.type.toUpperCase() : null;
+    const colorInput = req.body?.color;
+
+    if (!name) {
+      return res.status(400).json({ message: 'Informe o nome da categoria' });
+    }
+    if (type && type !== 'EXPENSE' && type !== 'INCOME') {
+      return res.status(400).json({ message: 'Tipo inválido. Use EXPENSE ou INCOME' });
+    }
+    if (colorInput != null && colorInput !== '' && !normalizeColor(colorInput)) {
+      return res.status(400).json({ message: 'Cor inválida. Use o formato #RRGGBB' });
+    }
+
+    const current = await db.query(
+      `SELECT name FROM categories WHERE id = $1 AND "userId" = $2`,
+      [req.params.id, req.user.sub],
+    );
+    if (!current.rowCount) {
+      return res.status(404).json({ message: 'Categoria não encontrada' });
+    }
+
+    const duplicate = await db.query(
+      `SELECT id FROM categories WHERE "userId" = $1 AND name = $2 AND id != $3`,
+      [req.user.sub, name, req.params.id],
+    );
+    if (duplicate.rowCount) {
+      return res.status(409).json({ message: 'Já existe uma categoria com esse nome' });
+    }
+
+    const color = colorInput != null && colorInput !== ''
+      ? normalizeColor(colorInput)
+      : null;
+
+    const result = await db.query(
+      `UPDATE categories SET
+         name = $1,
+         type = COALESCE($2, type),
+         color = COALESCE($3, color),
+         "updatedAt" = NOW()
+       WHERE id = $4 AND "userId" = $5
+       RETURNING id, name, type, color`,
+      [name, type, color, req.params.id, req.user.sub],
+    );
+
+    const oldName = current.rows[0].name;
+    if (name !== oldName) {
+      await db.query(
+        `UPDATE expenses SET category = $1 WHERE "userId" = $2 AND category = $3`,
+        [name, req.user.sub, oldName],
+      );
+      await db.query(
+        `UPDATE incomes SET category = $1 WHERE "userId" = $2 AND category = $3`,
+        [name, req.user.sub, oldName],
+      );
+    }
+
+    res.json(result.rows[0]);
+  }));
+
   router.delete('/:id', asyncHandler(async (req, res) => {
     const result = await db.query(
       `DELETE FROM categories WHERE id = $1 AND "userId" = $2 RETURNING id`,

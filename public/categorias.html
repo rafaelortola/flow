@@ -32,7 +32,7 @@
 
       <section class="panel">
         <div class="panel-header">
-          <h2>Nova categoria</h2>
+          <h2 id="categoryFormTitle">Nova categoria</h2>
         </div>
         <form id="categoryForm" class="inline-form">
           <label>
@@ -50,7 +50,8 @@
             Cor
             <input type="color" id="categoryColor" value="#6366f1" title="Cor de fundo da categoria" />
           </label>
-          <button type="submit" class="btn-primary">Adicionar</button>
+          <button type="submit" id="categorySubmitBtn" class="btn-primary">Adicionar</button>
+          <button type="button" id="cancelEditBtn" class="btn-outline hidden">Cancelar</button>
         </form>
         <p id="categoryError" class="error hidden" role="alert"></p>
       </section>
