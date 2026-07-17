@@ -4,6 +4,12 @@ const db = require('../db');
 
 const VALID_GROUPS = ['essential', 'nonessential', 'debt', 'card'];
 
+function isMissingCardsSchema(err) {
+  if (err.code === '42P01' || err.code === '42703') return true;
+  const msg = String(err.message || '');
+  return /relation "cards"/i.test(msg) || /card_id/i.test(msg);
+}
+
 function expenseRoutes(authMiddleware) {
   const router = express.Router();
   router.use(authMiddleware);
@@ -27,8 +33,20 @@ function expenseRoutes(authMiddleware) {
     }
     sql += ` ORDER BY e.due_date NULLS LAST, e.name`;
 
-    const result = await db.query(sql, params);
-    res.json(result.rows);
+    try {
+      const result = await db.query(sql, params);
+      return res.json(result.rows);
+    } catch (err) {
+      if (!isMissingCardsSchema(err)) throw err;
+
+      let fallbackSql = `SELECT * FROM expenses WHERE "userId" = $1 AND month = $2 AND year = $3`;
+      if (group && VALID_GROUPS.includes(group)) {
+        fallbackSql += ` AND expense_group = $4`;
+      }
+      fallbackSql += ` ORDER BY due_date NULLS LAST, name`;
+      const result = await db.query(fallbackSql, params);
+      return res.json(result.rows);
+    }
   });
 
   router.post('/', async (req, res) => {

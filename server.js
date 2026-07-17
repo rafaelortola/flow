@@ -11,6 +11,7 @@ const categoryRoutes = require('./routes/categories');
 const notesRoutes = require('./routes/notes');
 const reportsRoutes = require('./routes/reports');
 const cardRoutes = require('./routes/cards');
+const { ensureSchema } = require('./scripts/setup-db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -59,31 +60,43 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ message: err.message || 'Erro interno do servidor' });
 });
 
-const server = app.listen(PORT, () => {
-  console.log('');
-  console.log('========================================');
-  console.log('  FinanceFlow rodando!');
-  console.log(`  Site:  http://localhost:${PORT}`);
-  console.log(`  Login: http://localhost:${PORT}`);
-  console.log('========================================');
-  console.log('');
-});
-
-server.on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    console.error('');
-    console.error(`ERRO: a porta ${PORT} já está em uso.`);
-    console.error('');
-    console.error('Provavelmente outro "npm run dev" ainda está rodando.');
-    console.error('');
-    console.error('No PowerShell, libere a porta:');
-    console.error(`  netstat -ano | findstr :${PORT}`);
-    console.error('  taskkill /PID <numero_do_PID> /F');
-    console.error('');
-    console.error('Ou use outra porta no .env:');
-    console.error('  PORT=3001');
-    console.error('');
-    process.exit(1);
+async function start() {
+  if (process.env.DATABASE_URL) {
+    try {
+      await ensureSchema();
+    } catch (err) {
+      console.error('Aviso: falha na migração automática do banco:', err.message);
+    }
   }
-  throw err;
-});
+
+  const server = app.listen(PORT, () => {
+    console.log('');
+    console.log('========================================');
+    console.log('  FinanceFlow rodando!');
+    console.log(`  Site:  http://localhost:${PORT}`);
+    console.log(`  Login: http://localhost:${PORT}`);
+    console.log('========================================');
+    console.log('');
+  });
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error('');
+      console.error(`ERRO: a porta ${PORT} já está em uso.`);
+      console.error('');
+      console.error('Provavelmente outro "npm run dev" ainda está rodando.');
+      console.error('');
+      console.error('No PowerShell, libere a porta:');
+      console.error(`  netstat -ano | findstr :${PORT}`);
+      console.error('  taskkill /PID <numero_do_PID> /F');
+      console.error('');
+      console.error('Ou use outra porta no .env:');
+      console.error('  PORT=3001');
+      console.error('');
+      process.exit(1);
+    }
+    throw err;
+  });
+}
+
+start();

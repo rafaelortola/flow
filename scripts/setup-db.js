@@ -324,9 +324,13 @@ async function main() {
   console.log('Próximo passo: npm run import');
 }
 
-main()
-  .catch((err) => {
-    console.error('ERRO:', err.message);
-    process.exit(1);
-  })
-  .finally(() => pool.end());
+module.exports = { ensureSchema };
+
+if (require.main === module) {
+  main()
+    .catch((err) => {
+      console.error('ERRO:', err.message);
+      process.exit(1);
+    })
+    .finally(() => pool.end());
+}

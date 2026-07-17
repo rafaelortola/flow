@@ -102,8 +102,17 @@ function renderCards(items) {
 }
 
 async function loadCards() {
-  cardsCache = await api('/cards');
-  renderCards(cardsCache);
+  try {
+    cardsCache = await api('/cards');
+    renderCards(cardsCache);
+  } catch (err) {
+    if (err.status === 401) {
+      logout();
+      return;
+    }
+    showError(err.message || 'Erro ao carregar cartões. Reinicie o servidor (npm start) e tente novamente.');
+    renderCards([]);
+  }
 }
 
 function buildPayload() {
@@ -161,10 +170,12 @@ async function init() {
   try {
     const user = await api('/me');
     document.getElementById('userGreeting').textContent = user.name || user.email;
-    await loadCards();
-  } catch {
-    logout();
+  } catch (err) {
+    if (err.status === 401) logout();
+    else showError(err.message || 'Erro ao validar sessão.');
+    return;
   }
+  await loadCards();
 }
 
 init();

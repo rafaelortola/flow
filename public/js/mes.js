@@ -417,11 +417,19 @@ async function init() {
     document.getElementById('userGreeting').textContent = user.name || user.email;
     categories = await api('/categories');
     categoryColorMap = buildCategoryColorMap(categories);
-    cards = await api('/cards');
+    try {
+      cards = await api('/cards');
+    } catch (err) {
+      if (err.status === 401) {
+        logout();
+        return;
+      }
+      cards = [];
+    }
     options = await api('/categories/options');
     await loadAll();
-  } catch {
-    logout();
+  } catch (err) {
+    if (err.status === 401) logout();
   }
 }
 
