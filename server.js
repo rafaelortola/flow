@@ -9,6 +9,7 @@ const expenseRoutes = require('./routes/expenses');
 const dashboardRoutes = require('./routes/dashboard');
 const categoryRoutes = require('./routes/categories');
 const notesRoutes = require('./routes/notes');
+const reportsRoutes = require('./routes/reports');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -37,6 +38,7 @@ app.use('/api/expenses', expenseRoutes(authMiddleware));
 app.use('/api/dashboard', dashboardRoutes(authMiddleware));
 app.use('/api/categories', categoryRoutes(authMiddleware));
 app.use('/api/notes', notesRoutes(authMiddleware));
+app.use('/api/reports', reportsRoutes(authMiddleware));
 
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/')) return next();
