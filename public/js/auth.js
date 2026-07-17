@@ -32,7 +32,10 @@ async function api(path, options = {}) {
   }
 
   if (!res.ok) {
-    throw new Error(data.message || `Erro HTTP ${res.status}`);
+    const message = data.message || `Erro HTTP ${res.status}`;
+    const error = new Error(message);
+    error.status = res.status;
+    throw error;
   }
 
   return data;
