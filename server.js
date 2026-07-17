@@ -43,6 +43,18 @@ app.get('*', (req, res, next) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+app.use('/api', (_req, res) => {
+  res.status(404).json({ message: 'Rota não encontrada' });
+});
+
+app.use((err, _req, res, _next) => {
+  console.error('Erro API:', err.message);
+  if (err.code === '23505') {
+    return res.status(409).json({ message: 'Já existe um registro com esses dados' });
+  }
+  res.status(500).json({ message: err.message || 'Erro interno do servidor' });
+});
+
 const server = app.listen(PORT, () => {
   console.log('');
   console.log('========================================');
