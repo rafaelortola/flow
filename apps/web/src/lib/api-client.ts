@@ -1,4 +1,8 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+// No navegador usa proxy do Next.js (/api/v1 → backend). Evita 404 por URL errada.
+const API_URL =
+  typeof window !== 'undefined'
+    ? '/api/v1'
+    : (process.env.NEXT_PUBLIC_API_URL ?? `http://127.0.0.1:${process.env.PORT ?? 3001}/api/v1`);
 
 let accessToken: string | null = null;
 
@@ -89,7 +93,8 @@ export async function apiFetch<T>(
 
   if (!res.ok) {
     const error = await res.json().catch(() => null);
-    throw new Error(parseApiError(error, res.status));
+    const detail = parseApiError(error, res.status);
+    throw new Error(`${detail} → ${API_URL}${path}`);
   }
 
   if (res.status === 204) return undefined as T;
