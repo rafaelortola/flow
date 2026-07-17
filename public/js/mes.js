@@ -12,6 +12,7 @@ const yearSelect = document.getElementById('yearSelect');
 const params = new URLSearchParams(window.location.search);
 
 let categories = [];
+let categoryColorMap = new Map();
 let options = {};
 
 function formatMoney(v) {
@@ -60,36 +61,6 @@ function statusBadge(status) {
   return `<span class="badge ${cls}">${status || '—'}</span>`;
 }
 
-function formatInstallment(expense) {
-  const info = (expense.installment_info || '').trim();
-  const totalFromDb = expense.installment_total != null ? Number(expense.installment_total) : null;
-
-  if (!info && totalFromDb == null) return '—';
-
-  const fullMatch = info.match(/^(\d+)\s*de\s*(\d+)$/i);
-  if (fullMatch) {
-    const current = parseInt(fullMatch[1], 10);
-    const total = parseInt(fullMatch[2], 10);
-    if (current === total) return 'Última Parcela';
-    return `${current} de ${total}`;
-  }
-
-  const partialMatch = info.match(/^(\d+)\s*de\s*$/i);
-  if (partialMatch && totalFromDb) {
-    const current = parseInt(partialMatch[1], 10);
-    if (current === totalFromDb) return 'Última Parcela';
-    return `${current} de ${totalFromDb}`;
-  }
-
-  if (/^\d+$/.test(info) && totalFromDb) {
-    const current = parseInt(info, 10);
-    if (current === totalFromDb) return 'Última Parcela';
-    return `${current} de ${totalFromDb}`;
-  }
-
-  return info || '—';
-}
-
 function installmentInputValue(expense) {
   const info = (expense.installment_info || '').trim();
   const total = expense.installment_total != null ? Number(expense.installment_total) : null;
@@ -132,8 +103,8 @@ function renderExpenses(group, items) {
       <td>${formatDate(e.due_date)}</td>
       <td>${e.name}</td>
       <td>${formatMoney(e.amount)}</td>
-      <td>${e.category || '—'}</td>
-      ${showInstallment ? `<td>${formatInstallment(e)}</td>` : ''}
+      <td>${categoryTag(e.category || '—', categoryColorMap)}</td>
+      ${showInstallment ? `<td>${renderInstallmentCell(e)}</td>` : ''}
       <td>${statusBadge(e.payment_status)}</td>
       <td class="actions">
         <button class="btn-icon toggle-pay" data-id="${e.id}" data-status="${e.payment_status}" title="Alternar pago">✓</button>
@@ -167,7 +138,7 @@ function renderIncomes(items) {
   document.getElementById('incomesTable').innerHTML = items.map((i) => `
     <tr>
       <td>${i.source}</td>
-      <td>${i.category || '—'}</td>
+      <td>${categoryTag(i.category || '—', categoryColorMap)}</td>
       <td>${formatMoney(i.amount)}</td>
       <td class="actions">
         <button class="btn-icon edit-income" data-id="${i.id}">✎</button>
@@ -257,6 +228,7 @@ function categoriesByType(type) {
 
 async function refreshCategories() {
   categories = await api('/categories');
+  categoryColorMap = buildCategoryColorMap(categories);
 }
 
 function setModalFieldsRequired(type) {
@@ -409,6 +381,7 @@ async function init() {
     const user = await api('/me');
     document.getElementById('userGreeting').textContent = user.name || user.email;
     categories = await api('/categories');
+    categoryColorMap = buildCategoryColorMap(categories);
     options = await api('/categories/options');
     await loadAll();
   } catch {

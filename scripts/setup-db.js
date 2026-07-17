@@ -80,6 +80,7 @@ async function ensureSchema() {
         "userId" TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         name TEXT NOT NULL,
         type TEXT NOT NULL DEFAULT 'EXPENSE',
+        color TEXT,
         "createdAt" TIMESTAMP DEFAULT NOW(),
         "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW(),
         UNIQUE("userId", name)
@@ -93,6 +94,11 @@ async function ensureSchema() {
     console.log('OK: coluna categories.updatedAt adicionada');
   } else {
     await pool.query(`ALTER TABLE categories ALTER COLUMN "updatedAt" SET DEFAULT NOW()`).catch(() => {});
+  }
+
+  if (!(await columnExists('categories', 'color'))) {
+    await pool.query(`ALTER TABLE categories ADD COLUMN color TEXT`);
+    console.log('OK: coluna categories.color adicionada');
   }
 
   if (!(await tableExists('incomes'))) {

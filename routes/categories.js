@@ -8,6 +8,16 @@ function asyncHandler(fn) {
   };
 }
 
+const DEFAULT_CATEGORY_COLOR = '#6366F1';
+
+function normalizeColor(value) {
+  if (value == null || value === '') return null;
+  if (typeof value !== 'string') return null;
+  const hex = value.trim();
+  if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) return null;
+  return hex.toUpperCase();
+}
+
 function categoryRoutes(authMiddleware) {
   const router = express.Router();
   router.use(authMiddleware);
@@ -59,7 +69,7 @@ function categoryRoutes(authMiddleware) {
   router.get('/', asyncHandler(async (req, res) => {
     const type = typeof req.query.type === 'string' ? req.query.type.toUpperCase() : null;
     const params = [req.user.sub];
-    let sql = `SELECT id, name, type FROM categories WHERE "userId" = $1`;
+    let sql = `SELECT id, name, type, color FROM categories WHERE "userId" = $1`;
     if (type === 'EXPENSE' || type === 'INCOME') {
       sql += ` AND type = $2`;
       params.push(type);
@@ -72,12 +82,16 @@ function categoryRoutes(authMiddleware) {
   router.post('/', asyncHandler(async (req, res) => {
     const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
     const type = typeof req.body?.type === 'string' ? req.body.type.toUpperCase() : 'EXPENSE';
+    const color = normalizeColor(req.body?.color) || DEFAULT_CATEGORY_COLOR;
 
     if (!name) {
       return res.status(400).json({ message: 'Informe o nome da categoria' });
     }
     if (type !== 'EXPENSE' && type !== 'INCOME') {
       return res.status(400).json({ message: 'Tipo inválido. Use EXPENSE ou INCOME' });
+    }
+    if (req.body?.color && !normalizeColor(req.body.color)) {
+      return res.status(400).json({ message: 'Cor inválida. Use o formato #RRGGBB' });
     }
 
     const existing = await db.query(
@@ -90,10 +104,10 @@ function categoryRoutes(authMiddleware) {
 
     const id = crypto.randomUUID();
     const result = await db.query(
-      `INSERT INTO categories (id, "userId", name, type, "createdAt", "updatedAt")
-       VALUES ($1, $2, $3, $4, NOW(), NOW())
-       RETURNING id, name, type`,
-      [id, req.user.sub, name, type],
+      `INSERT INTO categories (id, "userId", name, type, color, "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+       RETURNING id, name, type, color`,
+      [id, req.user.sub, name, type, color],
     );
     res.status(201).json(result.rows[0]);
   }));
