@@ -13,15 +13,19 @@ function findEnvFile() {
     if (parent === dir) break;
     dir = parent;
   }
+  // fallback: repo root relative to this script
+  const fromScript = path.join(__dirname, '..', '.env');
+  if (fs.existsSync(fromScript)) return fromScript;
   return null;
 }
 
-function loadEnv() {
+function loadEnv(options = {}) {
+  const { force = false } = options;
   const envPath = findEnvFile();
   if (!envPath) return null;
 
   const content = fs.readFileSync(envPath, 'utf8').replace(/^\uFEFF/, '');
-  for (const line of content.split('\n')) {
+  for (const line of content.split(/\r?\n/)) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
     const eq = trimmed.indexOf('=');
@@ -34,12 +38,11 @@ function loadEnv() {
     ) {
       value = value.slice(1, -1);
     }
-    if (process.env[key] === undefined) process.env[key] = value;
+    if (force || process.env[key] === undefined) {
+      process.env[key] = value;
+    }
   }
   return envPath;
 }
 
 module.exports = { loadEnv, findEnvFile };
-
-// Auto-load when required with -r
-loadEnv();

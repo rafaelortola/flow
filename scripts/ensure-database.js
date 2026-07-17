@@ -45,18 +45,30 @@ function ask(question) {
   });
 }
 
-function appendEnvVar(envPath, key, value) {
-  if (!fs.existsSync(envPath)) return;
-  const content = fs.readFileSync(envPath, 'utf8');
-  if (content.includes(`${key}=`)) return;
-  fs.appendFileSync(envPath, `\n${key}=${value}\n`, 'utf8');
+function isPostgresDown(err) {
+  const msg = err.message || '';
+  const code = err.code || '';
+  return code === 'ECONNREFUSED' || msg.includes('ECONNREFUSED') || msg.includes('connect ETIMEDOUT');
+}
+
+function canAutoProvision(err) {
+  if (isPostgresDown(err)) return false;
+  const msg = err.message || '';
+  const code = err.code || '';
+  // 42704 = undefined_object (role), 3D000 = database does not exist
+  if (code === '42704' || code === '3D000' || code === '28P01') return true;
+  if (/exist/i.test(msg)) return true;
+  if (/existe/i.test(msg)) return true;
+  if (/authentication failed/i.test(msg)) return true;
+  if (/financeflow/i.test(msg)) return true;
+  return true; // qualquer outro erro de conexao: tenta criar se tiver senha admin
 }
 
 async function provisionPostgres(Client, dbConfig, adminPassword) {
-  const adminUser = process.env.POSTGRES_ADMIN_USER || 'postgres';
+  const adminUser = (process.env.POSTGRES_ADMIN_USER || 'postgres').trim();
   const adminUrl = `postgresql://${adminUser}:${encodeURIComponent(adminPassword)}@${dbConfig.host}:${dbConfig.port}/postgres`;
 
-  console.log(`\nCriando usuario '${dbConfig.user}' e banco '${dbConfig.database}'...`);
+  console.log(`\n>>> Criando usuario '${dbConfig.user}' e banco '${dbConfig.database}'...`);
 
   const admin = new Client({ connectionString: adminUrl });
   await admin.connect();
@@ -81,7 +93,7 @@ async function provisionPostgres(Client, dbConfig, adminPassword) {
   await admin.query(`GRANT ALL PRIVILEGES ON DATABASE "${safeDb}" TO "${safeUser}"`);
   await admin.end();
 
-  console.log('Banco e usuario criados com sucesso!');
+  console.log('>>> Banco e usuario criados!');
 }
 
 async function testConnection(Client, url) {
@@ -94,15 +106,17 @@ async function testConnection(Client, url) {
 async function ensure() {
   console.log('\n=== FinanceFlow: conectando ao banco ===\n');
 
-  let envPath = loadEnv() || findEnvFile();
+  let envPath = loadEnv({ force: true }) || findEnvFile();
   if (!envPath) {
     const example = path.join(root, '.env.example');
     if (fs.existsSync(example)) {
       fs.copyFileSync(example, path.join(root, '.env'));
       envPath = path.join(root, '.env');
-      loadEnv();
+      loadEnv({ force: true });
       console.log('Criado .env a partir de .env.example');
     }
+  } else {
+    console.log('.env ->', envPath);
   }
 
   if (!process.env.DATABASE_URL) {
@@ -110,7 +124,10 @@ async function ensure() {
     process.exit(1);
   }
 
+  const adminConfigured = Boolean((process.env.POSTGRES_ADMIN_PASSWORD || '').trim());
   console.log('DATABASE_URL ->', maskUrl(process.env.DATABASE_URL));
+  console.log('POSTGRES_ADMIN_PASSWORD ->', adminConfigured ? 'configurada' : 'NAO configurada');
+
   const dbConfig = parseDbUrl(process.env.DATABASE_URL);
 
   console.log('\n[1/4] Prisma generate + build...');
@@ -130,40 +147,43 @@ async function ensure() {
     await testConnection(Client, process.env.DATABASE_URL);
     console.log('Conexao OK');
   } catch (err) {
-    const msg = err.message || '';
-    const needsProvision =
-      msg.includes('does not exist') ||
-      msg.includes('nao existe') ||
-      msg.includes('não existe') ||
-      msg.includes('password authentication failed');
+    console.log('Falha inicial:', err.message);
 
-    if (!needsProvision) {
-      console.error('\nERRO:', msg);
-      console.error('Verifique se PostgreSQL esta rodando.\n');
+    if (isPostgresDown(err)) {
+      console.error('\nERRO: PostgreSQL nao esta rodando.');
+      console.error('Abra "Services" no Windows e inicie postgresql-x64-XX.\n');
       process.exit(1);
     }
 
-    let adminPassword = process.env.POSTGRES_ADMIN_PASSWORD || '';
+    if (!canAutoProvision(err)) {
+      console.error('\nERRO:', err.message, '\n');
+      process.exit(1);
+    }
+
+    let adminPassword = (process.env.POSTGRES_ADMIN_PASSWORD || '').trim();
     if (!adminPassword && process.stdin.isTTY) {
-      console.log('\nUsuario/banco financeflow ainda nao existe no Postgres.');
-      adminPassword = await ask('Senha do usuario postgres (Enter para cancelar): ');
+      console.log('\nPreciso da senha do usuario postgres para criar o banco financeflow.');
+      adminPassword = (await ask('Senha postgres: ')).trim();
     }
 
     if (!adminPassword) {
-      console.error('\nERRO:', msg);
-      console.error('\nAdicione no .env: POSTGRES_ADMIN_PASSWORD=sua_senha_postgres');
-      console.error('Ou rode: .\\scripts\\setup-all.ps1 -PostgresPassword "SUA_SENHA"\n');
+      console.error('\nERRO: POSTGRES_ADMIN_PASSWORD nao encontrada no .env');
+      console.error('');
+      console.error('Abra o arquivo .env e adicione esta linha (sem aspas):');
+      console.error('POSTGRES_ADMIN_PASSWORD=sua_senha_aqui');
+      console.error('');
+      console.error('Depois rode: pnpm dev\n');
       process.exit(1);
     }
 
     try {
       await provisionPostgres(Client, dbConfig, adminPassword);
-      if (envPath) appendEnvVar(envPath, 'POSTGRES_ADMIN_PASSWORD', adminPassword);
       await testConnection(Client, process.env.DATABASE_URL);
       console.log('Conexao OK');
     } catch (provisionErr) {
       console.error('\nERRO ao criar banco:', provisionErr.message);
-      console.error('Senha do postgres correta?\n');
+      console.error('A senha do postgres esta correta?');
+      console.error('Usuario admin:', process.env.POSTGRES_ADMIN_USER || 'postgres', '\n');
       process.exit(1);
     }
   }
