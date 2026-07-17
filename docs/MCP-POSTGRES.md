@@ -22,9 +22,29 @@ Conecta o **Cursor Desktop** ao seu PostgreSQL local via [Model Context Protocol
 DATABASE_URL=postgresql://financeflow:financeflow@localhost:5432/financeflow
 ```
 
-## Configuração (já incluída no projeto)
+## Configuração
 
-O arquivo [`.cursor/mcp.json`](../.cursor/mcp.json) aponta para [`scripts/mcp-postgres.js`](../scripts/mcp-postgres.js), que lê o `.env` e inicia o MCP **sem colocar senha no JSON**.
+### Opção A — Projeto (recomendado)
+
+Depois do `git pull`, o arquivo [`.cursor/mcp.json`](../.cursor/mcp.json) **já vem no repositório**.  
+Abra a pasta `flow` no Cursor — **não precisa** copiar nada para `C:\Users\Pichau\.cursor\mcp.json`.
+
+### Opção B — Global (`~/.cursor/mcp.json`)
+
+Se colocar no MCP **global** do Windows, use **caminho absoluto** (caminho relativo `scripts/...` **não funciona**):
+
+```json
+{
+  "mcpServers": {
+    "financeflow-postgres": {
+      "command": "node",
+      "args": ["C:/Users/Pichau/Documents/flow/scripts/mcp-postgres.js"]
+    }
+  }
+}
+```
+
+> Ajuste o caminho se seu clone estiver em outro lugar.
 
 ### Ativar no Cursor
 
