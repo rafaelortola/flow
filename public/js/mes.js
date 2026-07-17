@@ -38,15 +38,17 @@ function initPeriodSelectors() {
     opt.textContent = name;
     monthSelect.appendChild(opt);
   });
-  const currentYear = new Date().getFullYear();
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
   for (let y = currentYear - 1; y <= currentYear + 1; y++) {
     const opt = document.createElement('option');
     opt.value = y;
     opt.textContent = y;
     yearSelect.appendChild(opt);
   }
-  monthSelect.value = params.get('month') || '6';
-  yearSelect.value = params.get('year') || '2026';
+  monthSelect.value = params.get('month') || String(currentMonth);
+  yearSelect.value = params.get('year') || String(currentYear);
 }
 
 function statusBadge(status) {
