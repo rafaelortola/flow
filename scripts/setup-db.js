@@ -20,6 +20,10 @@ const EXPENSE_CATEGORIES = [
   'Educação',
 ];
 
+const INCOME_CATEGORIES = [
+  'Salário', 'Freelance', 'Biz', 'EDS', 'DB4SERV', 'Empréstimo', 'Outros',
+];
+
 async function tableExists(name) {
   const result = await pool.query(
     `SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1`,
@@ -98,6 +102,11 @@ async function ensureSchema() {
     `);
     await pool.query(`CREATE INDEX idx_incomes_user_period ON incomes ("userId", year, month)`);
     console.log('OK: tabela incomes criada');
+  }
+
+  if (!(await columnExists('incomes', 'category'))) {
+    await pool.query(`ALTER TABLE incomes ADD COLUMN category TEXT`);
+    console.log('OK: coluna incomes.category adicionada');
   }
 
   if (!(await tableExists('expenses'))) {
@@ -208,7 +217,23 @@ async function seedCategories(userId) {
       );
     }
   }
-  console.log(`OK: ${EXPENSE_CATEGORIES.length} categorias seed`);
+
+  for (const name of INCOME_CATEGORIES) {
+    const id = `cat-income-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+    const exists = await pool.query(
+      `SELECT id FROM categories WHERE "userId" = $1 AND name = $2`,
+      [userId, name],
+    );
+    if (exists.rowCount === 0) {
+      await pool.query(
+        `INSERT INTO categories (id, "userId", name, type, "createdAt")
+         VALUES ($1, $2, $3, 'INCOME', NOW())`,
+        [id, userId, name],
+      );
+    }
+  }
+
+  console.log(`OK: ${EXPENSE_CATEGORIES.length + INCOME_CATEGORIES.length} categorias seed`);
 }
 
 async function main() {

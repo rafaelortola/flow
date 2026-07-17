@@ -26,8 +26,9 @@ function incomeRoutes(authMiddleware) {
   });
 
   router.post('/', async (req, res) => {
-    const { month, year, source, amount } = req.body || {};
+    const { month, year, source, amount, category } = req.body || {};
     const trimmedSource = typeof source === 'string' ? source.trim() : '';
+    const trimmedCategory = typeof category === 'string' ? category.trim() : null;
     const parsedAmount = parseAmount(amount);
 
     if (!month || !year || !trimmedSource) {
@@ -39,17 +40,18 @@ function incomeRoutes(authMiddleware) {
 
     const id = crypto.randomUUID();
     const result = await db.query(
-      `INSERT INTO incomes (id, "userId", month, year, source, amount)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [id, req.user.sub, month, year, trimmedSource, parsedAmount],
+      `INSERT INTO incomes (id, "userId", month, year, source, amount, category)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [id, req.user.sub, month, year, trimmedSource, parsedAmount, trimmedCategory || null],
     );
     res.status(201).json(result.rows[0]);
   });
 
   router.patch('/:id', async (req, res) => {
-    const { source, amount } = req.body || {};
+    const { source, amount, category } = req.body || {};
     const trimmedSource = typeof source === 'string' ? source.trim() : source;
     const parsedAmount = amount == null ? null : parseAmount(amount);
+    const trimmedCategory = typeof category === 'string' ? category.trim() || null : null;
 
     if (trimmedSource === '') {
       return res.status(400).json({ message: 'A fonte não pode ficar vazia' });
@@ -62,9 +64,10 @@ function incomeRoutes(authMiddleware) {
       `UPDATE incomes SET
          source = COALESCE($1, source),
          amount = COALESCE($2, amount),
+         category = $3,
          "updatedAt" = NOW()
-       WHERE id = $3 AND "userId" = $4 RETURNING *`,
-      [trimmedSource ?? null, parsedAmount, req.params.id, req.user.sub],
+       WHERE id = $4 AND "userId" = $5 RETURNING *`,
+      [trimmedSource ?? null, parsedAmount, trimmedCategory, req.params.id, req.user.sub],
     );
     if (!result.rowCount) return res.status(404).json({ message: 'Não encontrado' });
     res.json(result.rows[0]);
