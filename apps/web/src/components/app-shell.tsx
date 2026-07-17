@@ -27,7 +27,7 @@ import { Button } from './ui/button';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/receitas', label: 'Receitas', icon: TrendingUp },
+  { href: '/receitas', label: 'Recebíveis', icon: TrendingUp },
   { href: '/despesas', label: 'Despesas', icon: TrendingDown },
   { href: '/dividas', label: 'Dívidas', icon: CreditCard },
   { href: '/parcelamentos', label: 'Parcelamentos', icon: CalendarClock },

@@ -2,9 +2,10 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api-client';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, parseCurrencyInput } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -25,15 +26,27 @@ interface Props {
   type: 'incomes' | 'expenses';
   title: string;
   categoryType: 'INCOME' | 'EXPENSE';
+  entityName?: string;
+  submitLabel?: string;
 }
 
-export function TransactionPage({ type, title, categoryType }: Props) {
+export function TransactionPage({
+  type,
+  title,
+  categoryType,
+  entityName,
+  submitLabel = 'Adicionar',
+}: Props) {
   const [items, setItems] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const singular = entityName ?? title.slice(0, -1).toLowerCase();
 
   const load = async () => {
     const [list, cats] = await Promise.all([
@@ -50,23 +63,43 @@ export function TransactionPage({ type, title, categoryType }: Props) {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    await apiFetch(`/${type}`, {
-      method: 'POST',
-      body: JSON.stringify({
-        amount: parseFloat(amount),
-        date,
-        description: description || undefined,
-        categoryId: categoryId || undefined,
-      }),
-    });
-    setAmount('');
-    setDescription('');
-    await load();
+    setError('');
+
+    const parsedAmount = parseCurrencyInput(amount);
+    if (Number.isNaN(parsedAmount) || parsedAmount < 0.01) {
+      setError('Informe um valor válido (mínimo R$ 0,01).');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await apiFetch(`/${type}`, {
+        method: 'POST',
+        body: JSON.stringify({
+          amount: parsedAmount,
+          date,
+          description: description || undefined,
+          categoryId: categoryId || undefined,
+        }),
+      });
+      setAmount('');
+      setDescription('');
+      setCategoryId('');
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao salvar. Tente novamente.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
-    await apiFetch(`/${type}/${id}`, { method: 'DELETE' });
-    await load();
+    try {
+      await apiFetch(`/${type}/${id}`, { method: 'DELETE' });
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao excluir.');
+    }
   };
 
   return (
@@ -77,17 +110,15 @@ export function TransactionPage({ type, title, categoryType }: Props) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Nova {title.slice(0, -1).toLowerCase()}</CardTitle>
+          <CardTitle>Novo {singular}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <Input
-              type="number"
-              step="0.01"
-              placeholder="Valor"
+            <CurrencyInput
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={setAmount}
               required
+              aria-label="Valor"
             />
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
             <Input
@@ -103,8 +134,11 @@ export function TransactionPage({ type, title, categoryType }: Props) {
                 </option>
               ))}
             </Select>
-            <Button type="submit">Adicionar</Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? 'Salvando...' : submitLabel}
+            </Button>
           </form>
+          {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
         </CardContent>
       </Card>
 
