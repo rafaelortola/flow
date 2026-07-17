@@ -21,7 +21,35 @@ Sistema SaaS de controle financeiro pessoal.
 
 ## Desenvolvimento local
 
-### Setup
+### Pré-requisitos
+
+- Node.js 20+
+- pnpm (`npm install -g pnpm`)
+- PostgreSQL local (sem Docker)
+
+### Forma mais fácil (Windows)
+
+1. Crie o banco no Postgres (uma vez):
+
+```sql
+CREATE USER financeflow WITH PASSWORD 'financeflow';
+CREATE DATABASE financeflow OWNER financeflow;
+```
+
+2. Rode o script de setup (faz tudo: install, prisma, migrate, seed, dev):
+
+```powershell
+cd C:\Users\Pichau\Documents\flow
+git checkout -- pnpm-workspace.yaml   # se git pull falhar
+git pull origin main
+.\scripts\setup.ps1
+```
+
+Ou dê duplo clique em `scripts\setup.bat`.
+
+**Login demo:** `demo@financeflow.com` / `demo123456`
+
+### Setup manual
 
 ```bash
 cp .env.example .env
