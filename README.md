@@ -82,6 +82,12 @@ DATABASE_URL=postgresql://financeflow:financeflow@localhost:5432/financeflow
 - Email: `demo@financeflow.com`
 - Senha: `demo123456`
 
+## MCP Postgres (Cursor Desktop)
+
+Para a IA consultar seu Postgres local diretamente no Cursor, veja [docs/MCP-POSTGRES.md](docs/MCP-POSTGRES.md).
+
+Configuração rápida: `.env` com `DATABASE_URL` → Settings → MCP → ativar `financeflow-postgres`.
+
 ## Docker (stack completa)
 
 ```bash
