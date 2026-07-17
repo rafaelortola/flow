@@ -64,7 +64,9 @@ Se preferir que o script faça tudo (cria banco, .env, push, seed):
 | Problema | Solução |
 |----------|---------|
 | `role "financeflow" does not exist` | Use `postgres` no `.env` (não precisa criar usuário extra) |
-| `Failed to fetch` | API não está rodando — confira http://localhost:3001/api/v1 |
+| `Failed to fetch` / não conecta à API | A API não subiu. Rode `pnpm dev:api` e espere `API OK`. Teste: http://localhost:3001/api/v1/health |
+| Porta 3001 em uso | Mude `PORT=3002` no `.env` e `NEXT_PUBLIC_API_URL=http://localhost:3002/api/v1` |
+| Senha com `@` ou `#` no postgres | Encode na URL: `@` → `%40`, `#` → `%23` |
 | Frontend em outra porta (3002) | Normal se 3000 estiver ocupada — CORS aceita qualquer localhost |
 
 ## MCP Postgres (Cursor Desktop)

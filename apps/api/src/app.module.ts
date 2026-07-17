@@ -9,11 +9,13 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { DebtsModule } from './debts/debts.module';
 import { InvestmentsModule } from './investments/investments.module';
 import { CashModule } from './cash/cash.module';
+import { HealthModule } from './health/health.module';
 import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
     PrismaModule,
+    HealthModule,
     AuthModule,
     UsersModule,
     CategoriesModule,

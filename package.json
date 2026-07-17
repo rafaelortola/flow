@@ -3,7 +3,9 @@
   "private": true,
   "scripts": {
     "postinstall": "prisma generate",
-    "dev": "pnpm --parallel --filter @financeflow/api --filter @financeflow/web dev",
+    "dev": "concurrently -n api,web -c blue,green \"pnpm --filter @financeflow/api dev\" \"pnpm --filter @financeflow/web dev\"",
+    "dev:api": "pnpm --filter @financeflow/api dev",
+    "dev:web": "pnpm --filter @financeflow/web dev",
     "build": "prisma generate && pnpm --filter @financeflow/api build && pnpm --filter @financeflow/web build",
     "test": "prisma generate && pnpm --filter @financeflow/api test",
     "setup": "prisma generate && prisma db push && prisma db seed",
@@ -24,6 +26,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.10.7",
     "bcryptjs": "^2.4.3",
+    "concurrently": "^9.1.2",
     "pg": "^8.13.1",
     "prisma": "^6.3.1",
     "tsx": "^4.19.2",

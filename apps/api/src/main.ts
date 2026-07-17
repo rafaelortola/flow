@@ -24,13 +24,26 @@ async function bootstrap() {
     }),
   );
 
-  const port = process.env.PORT ?? 3001;
-  await app.listen(port);
-  console.log(`API running on http://localhost:${port}/api/v1`);
-  console.log(`Database connected via DATABASE_URL`);
+  const port = Number(process.env.PORT ?? 3001);
+  await app.listen(port, '0.0.0.0');
+  console.log('');
+  console.log('========================================');
+  console.log(`  API OK: http://localhost:${port}/api/v1`);
+  console.log(`  Health: http://localhost:${port}/api/v1/health`);
+  console.log('========================================');
+  console.log('');
 }
 
 bootstrap().catch((err) => {
-  console.error('Failed to start API:', err.message);
+  console.error('');
+  console.error('ERRO ao iniciar a API:');
+  if (err.code === 'EADDRINUSE') {
+    console.error(`  Porta ${process.env.PORT ?? 3001} ja esta em uso.`);
+    console.error('  Feche o outro processo ou mude PORT no .env');
+  } else {
+    console.error(`  ${err.message}`);
+  }
+  console.error('');
+  console.error('Confira DATABASE_URL no .env (usuario postgres + senha correta)');
   process.exit(1);
 });
