@@ -43,7 +43,7 @@ app.get('*', (req, res, next) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log('');
   console.log('========================================');
   console.log('  FinanceFlow rodando!');
@@ -51,4 +51,23 @@ app.listen(PORT, () => {
   console.log(`  Login: http://localhost:${PORT}`);
   console.log('========================================');
   console.log('');
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error('');
+    console.error(`ERRO: a porta ${PORT} já está em uso.`);
+    console.error('');
+    console.error('Provavelmente outro "npm run dev" ainda está rodando.');
+    console.error('');
+    console.error('No PowerShell, libere a porta:');
+    console.error(`  netstat -ano | findstr :${PORT}`);
+    console.error('  taskkill /PID <numero_do_PID> /F');
+    console.error('');
+    console.error('Ou use outra porta no .env:');
+    console.error('  PORT=3001');
+    console.error('');
+    process.exit(1);
+  }
+  throw err;
 });
