@@ -17,6 +17,7 @@
         <a href="/dashboard.html">Dashboard</a>
         <a href="/mes.html" class="active">Controle Mensal</a>
         <a href="/categorias.html">Categorias</a>
+        <a href="/cartoes.html">Cartões</a>
         <a href="/relatorios.html">Relatórios</a>
       </nav>
       <button id="logoutBtn" class="btn-outline sidebar-logout">Sair</button>
@@ -111,7 +112,7 @@
           <button class="btn-primary btn-sm add-expense-btn" data-group="card">+ Despesa</button>
         </div>
         <div class="table-wrap"><table><thead><tr>
-          <th>Venc.</th><th>Nome</th><th>Valor</th><th>Categoria</th><th>Status</th><th></th>
+          <th>Venc.</th><th>Nome</th><th>Valor</th><th>Categoria</th><th>Cartão</th><th>Status</th><th></th>
         </tr></thead><tbody id="expenses-card"></tbody></table></div>
       </section>
     </div>
@@ -130,6 +131,7 @@
           <label>Nome<input type="text" id="fName" required /></label>
           <label>Valor<input type="number" id="fAmount" step="0.01" required /></label>
           <label>Categoria<select id="fCategory"></select></label>
+          <label id="cardField" class="hidden">Cartão<select id="fCard" required></select></label>
           <label>Tipo de gasto<select id="fSpendingType"></select></label>
           <label>Tipo da dívida<select id="fDebtType"></select></label>
           <label>Parcelado<input type="text" id="fInstallment" placeholder="ex: 2 de 10" /></label>

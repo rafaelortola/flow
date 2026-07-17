@@ -24,6 +24,12 @@ const INCOME_CATEGORIES = [
   'Salário', 'Freelance', 'Biz', 'EDS', 'DB4SERV', 'Empréstimo', 'Outros',
 ];
 
+const DEMO_CARDS = [
+  { name: 'Nubank', color: '#820AD1', closing_day: 3, due_day: 10 },
+  { name: 'Itaú', color: '#EC7000', closing_day: 15, due_day: 22 },
+  { name: 'Inter', color: '#FF7A00', closing_day: 1, due_day: 8 },
+];
+
 async function tableExists(name) {
   const result = await pool.query(
     `SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1`,
@@ -189,6 +195,28 @@ async function ensureSchema() {
     `);
     console.log('OK: tabela category_budgets criada');
   }
+
+  if (!(await tableExists('cards'))) {
+    await pool.query(`
+      CREATE TABLE cards (
+        id TEXT PRIMARY KEY,
+        "userId" TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        color TEXT,
+        closing_day INTEGER,
+        due_day INTEGER,
+        "createdAt" TIMESTAMP DEFAULT NOW(),
+        "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+        UNIQUE("userId", name)
+      )
+    `);
+    console.log('OK: tabela cards criada');
+  }
+
+  if (!(await columnExists('expenses', 'card_id'))) {
+    await pool.query(`ALTER TABLE expenses ADD COLUMN card_id TEXT REFERENCES cards(id) ON DELETE SET NULL`);
+    console.log('OK: coluna expenses.card_id adicionada');
+  }
 }
 
 async function seedDemoUser() {
@@ -255,6 +283,24 @@ async function seedCategories(userId) {
   console.log(`OK: ${EXPENSE_CATEGORIES.length + INCOME_CATEGORIES.length} categorias seed`);
 }
 
+async function seedCards(userId) {
+  for (const card of DEMO_CARDS) {
+    const exists = await pool.query(
+      `SELECT id FROM cards WHERE "userId" = $1 AND name = $2`,
+      [userId, card.name],
+    );
+    if (exists.rowCount === 0) {
+      const id = `card-${card.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+      await pool.query(
+        `INSERT INTO cards (id, "userId", name, color, closing_day, due_day, "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())`,
+        [id, userId, card.name, card.color, card.closing_day, card.due_day],
+      );
+    }
+  }
+  console.log(`OK: ${DEMO_CARDS.length} cartões seed`);
+}
+
 async function main() {
   if (!process.env.DATABASE_URL) {
     console.error('ERRO: DATABASE_URL não definido no .env');
@@ -268,6 +314,7 @@ async function main() {
   await ensureSchema();
   const userId = await seedDemoUser();
   await seedCategories(userId);
+  await seedCards(userId);
 
   console.log('');
   console.log('Login demo:');

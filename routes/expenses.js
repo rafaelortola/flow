@@ -16,13 +16,16 @@ function expenseRoutes(authMiddleware) {
       return res.status(400).json({ message: 'month e year são obrigatórios' });
     }
 
-    let sql = `SELECT * FROM expenses WHERE "userId" = $1 AND month = $2 AND year = $3`;
+    let sql = `SELECT e.*, c.name AS card_name, c.color AS card_color
+               FROM expenses e
+               LEFT JOIN cards c ON c.id = e.card_id
+               WHERE e."userId" = $1 AND e.month = $2 AND e.year = $3`;
     const params = [req.user.sub, month, year];
     if (group && VALID_GROUPS.includes(group)) {
-      sql += ` AND expense_group = $4`;
+      sql += ` AND e.expense_group = $4`;
       params.push(group);
     }
-    sql += ` ORDER BY due_date NULLS LAST, name`;
+    sql += ` ORDER BY e.due_date NULLS LAST, e.name`;
 
     const result = await db.query(sql, params);
     res.json(result.rows);
@@ -38,12 +41,28 @@ function expenseRoutes(authMiddleware) {
     }
 
     const id = crypto.randomUUID();
+    let cardId = b.card_id || null;
+    if (b.expense_group === 'card') {
+      if (!cardId) {
+        return res.status(400).json({ message: 'Selecione o cartão para despesas de cartão' });
+      }
+      const card = await db.query(
+        `SELECT id FROM cards WHERE id = $1 AND "userId" = $2`,
+        [cardId, req.user.sub],
+      );
+      if (!card.rowCount) {
+        return res.status(400).json({ message: 'Cartão inválido' });
+      }
+    } else {
+      cardId = null;
+    }
+
     const result = await db.query(
       `INSERT INTO expenses (
         id, "userId", month, year, due_date, name, amount, category, expense_group,
         spending_type, debt_type, installment_info, installment_total,
-        payment_status, reviewed, pay_period, week1_amount, week2_amount
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+        payment_status, reviewed, pay_period, week1_amount, week2_amount, card_id
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
       RETURNING *`,
       [
         id, req.user.sub, b.month, b.year, b.due_date || null, b.name, b.amount,
@@ -51,6 +70,7 @@ function expenseRoutes(authMiddleware) {
         b.installment_info || null, b.installment_total || null,
         b.payment_status || 'Não pago', b.reviewed ?? false,
         b.pay_period || null, b.week1_amount || 0, b.week2_amount || 0,
+        cardId,
       ],
     );
     res.status(201).json(result.rows[0]);
@@ -58,6 +78,31 @@ function expenseRoutes(authMiddleware) {
 
   router.patch('/:id', async (req, res) => {
     const b = req.body || {};
+    const current = await db.query(
+      `SELECT expense_group, card_id FROM expenses WHERE id = $1 AND "userId" = $2`,
+      [req.params.id, req.user.sub],
+    );
+    if (!current.rowCount) return res.status(404).json({ message: 'Não encontrado' });
+
+    const expenseGroup = b.expense_group ?? current.rows[0].expense_group;
+    let cardId;
+
+    if (expenseGroup === 'card') {
+      cardId = b.card_id !== undefined ? (b.card_id || null) : current.rows[0].card_id;
+      if (!cardId) {
+        return res.status(400).json({ message: 'Selecione o cartão para despesas de cartão' });
+      }
+      const card = await db.query(
+        `SELECT id FROM cards WHERE id = $1 AND "userId" = $2`,
+        [cardId, req.user.sub],
+      );
+      if (!card.rowCount) {
+        return res.status(400).json({ message: 'Cartão inválido' });
+      }
+    } else {
+      cardId = null;
+    }
+
     const result = await db.query(
       `UPDATE expenses SET
          due_date = COALESCE($1, due_date),
@@ -74,14 +119,16 @@ function expenseRoutes(authMiddleware) {
          pay_period = COALESCE($12, pay_period),
          week1_amount = COALESCE($13, week1_amount),
          week2_amount = COALESCE($14, week2_amount),
+         card_id = $15,
          "updatedAt" = NOW()
-       WHERE id = $15 AND "userId" = $16 RETURNING *`,
+       WHERE id = $16 AND "userId" = $17 RETURNING *`,
       [
         b.due_date ?? null, b.name ?? null, b.amount ?? null, b.category ?? null,
         b.expense_group ?? null, b.spending_type ?? null, b.debt_type ?? null,
         b.installment_info ?? null, b.installment_total ?? null,
         b.payment_status ?? null, b.reviewed ?? null, b.pay_period ?? null,
         b.week1_amount ?? null, b.week2_amount ?? null,
+        cardId,
         req.params.id, req.user.sub,
       ],
     );

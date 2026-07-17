@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FinanceFlow — Categorias</title>
+  <title>FinanceFlow — Cartões</title>
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
@@ -16,8 +16,8 @@
       <nav class="sidebar-nav">
         <a href="/dashboard.html">Dashboard</a>
         <a href="/mes.html">Controle Mensal</a>
-        <a href="/categorias.html" class="active">Categorias</a>
-        <a href="/cartoes.html">Cartões</a>
+        <a href="/categorias.html">Categorias</a>
+        <a href="/cartoes.html" class="active">Cartões</a>
         <a href="/relatorios.html">Relatórios</a>
       </nav>
       <button id="logoutBtn" class="btn-outline sidebar-logout">Sair</button>
@@ -26,47 +26,41 @@
     <div class="content">
       <header class="content-header">
         <div>
-          <h1>Categorias</h1>
+          <h1>Cartões</h1>
           <p class="subtitle" id="userGreeting">...</p>
         </div>
       </header>
 
       <section class="panel">
         <div class="panel-header">
-          <h2 id="categoryFormTitle">Nova categoria</h2>
+          <h2 id="cardFormTitle">Novo cartão</h2>
         </div>
-        <form id="categoryForm" class="inline-form">
+        <form id="cardForm" class="inline-form">
           <label>
             Nome
-            <input type="text" id="categoryName" placeholder="Ex: Alimentação, Salário..." required />
-          </label>
-          <label>
-            Tipo
-            <select id="categoryType" required>
-              <option value="EXPENSE">Despesa</option>
-              <option value="INCOME">Recebível</option>
-            </select>
+            <input type="text" id="cardName" placeholder="Ex: Nubank, Itaú..." required />
           </label>
           <label>
             Cor
-            <input type="color" id="categoryColor" value="#6366f1" title="Cor de fundo da categoria" />
+            <input type="color" id="cardColor" value="#a855f7" title="Cor de identificação do cartão" />
           </label>
-          <button type="submit" id="categorySubmitBtn" class="btn-primary">Adicionar</button>
+          <label>
+            Fechamento
+            <input type="number" id="cardClosingDay" min="1" max="31" placeholder="Dia 1–31" />
+          </label>
+          <label>
+            Vencimento
+            <input type="number" id="cardDueDay" min="1" max="31" placeholder="Dia 1–31" />
+          </label>
+          <button type="submit" id="cardSubmitBtn" class="btn-primary">Adicionar</button>
           <button type="button" id="cancelEditBtn" class="btn-outline hidden">Cancelar</button>
         </form>
-        <p id="categoryError" class="error hidden" role="alert"></p>
+        <p id="cardError" class="error hidden" role="alert"></p>
       </section>
 
       <section class="panel">
         <div class="panel-header">
-          <h2>Lista de categorias</h2>
-          <div class="period-select">
-            <select id="filterType">
-              <option value="">Todas</option>
-              <option value="EXPENSE">Despesas</option>
-              <option value="INCOME">Recebíveis</option>
-            </select>
-          </div>
+          <h2>Lista de cartões</h2>
         </div>
         <div class="table-wrap">
           <table>
@@ -74,11 +68,12 @@
               <tr>
                 <th>Cor</th>
                 <th>Nome</th>
-                <th>Tipo</th>
+                <th>Fechamento</th>
+                <th>Vencimento</th>
                 <th></th>
               </tr>
             </thead>
-            <tbody id="categoriesTable"></tbody>
+            <tbody id="cardsTable"></tbody>
           </table>
         </div>
       </section>
@@ -87,6 +82,6 @@
 
   <script src="/js/auth.js"></script>
   <script src="/js/ui-helpers.js"></script>
-  <script src="/js/categorias.js"></script>
+  <script src="/js/cartoes.js"></script>
 </body>
 </html>
