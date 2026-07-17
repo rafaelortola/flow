@@ -90,7 +90,9 @@ function categoryRoutes(authMiddleware) {
 
     const id = crypto.randomUUID();
     const result = await db.query(
-      `INSERT INTO categories (id, "userId", name, type) VALUES ($1, $2, $3, $4) RETURNING id, name, type`,
+      `INSERT INTO categories (id, "userId", name, type, "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, NOW(), NOW())
+       RETURNING id, name, type`,
       [id, req.user.sub, name, type],
     );
     res.status(201).json(result.rows[0]);

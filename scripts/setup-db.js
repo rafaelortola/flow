@@ -81,10 +81,18 @@ async function ensureSchema() {
         name TEXT NOT NULL,
         type TEXT NOT NULL DEFAULT 'EXPENSE',
         "createdAt" TIMESTAMP DEFAULT NOW(),
+        "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW(),
         UNIQUE("userId", name)
       )
     `);
     console.log('OK: tabela categories criada');
+  }
+
+  if (!(await columnExists('categories', 'updatedAt'))) {
+    await pool.query(`ALTER TABLE categories ADD COLUMN "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW()`);
+    console.log('OK: coluna categories.updatedAt adicionada');
+  } else {
+    await pool.query(`ALTER TABLE categories ALTER COLUMN "updatedAt" SET DEFAULT NOW()`).catch(() => {});
   }
 
   if (!(await tableExists('incomes'))) {
@@ -211,8 +219,8 @@ async function seedCategories(userId) {
     );
     if (exists.rowCount === 0) {
       await pool.query(
-        `INSERT INTO categories (id, "userId", name, type, "createdAt")
-         VALUES ($1, $2, $3, 'EXPENSE', NOW())`,
+        `INSERT INTO categories (id, "userId", name, type, "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, 'EXPENSE', NOW(), NOW())`,
         [id, userId, name],
       );
     }
@@ -226,8 +234,8 @@ async function seedCategories(userId) {
     );
     if (exists.rowCount === 0) {
       await pool.query(
-        `INSERT INTO categories (id, "userId", name, type, "createdAt")
-         VALUES ($1, $2, $3, 'INCOME', NOW())`,
+        `INSERT INTO categories (id, "userId", name, type, "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, 'INCOME', NOW(), NOW())`,
         [id, userId, name],
       );
     }
