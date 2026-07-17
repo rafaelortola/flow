@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
@@ -36,7 +36,12 @@ export class AuthService {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    const valid = await bcrypt.compare(dto.password, user.passwordHash);
+    let valid = false;
+    try {
+      valid = await bcrypt.compare(dto.password, user.passwordHash);
+    } catch {
+      throw new UnauthorizedException('Credenciais inválidas');
+    }
     if (!valid) {
       throw new UnauthorizedException('Credenciais inválidas');
     }
@@ -67,24 +72,24 @@ export class AuthService {
   }
 
   private async issueTokens(userId: string, email: string) {
-    const accessSecret = (process.env.JWT_ACCESS_SECRET ?? 'dev-secret').trim();
-    const accessExpiresIn = (process.env.JWT_ACCESS_EXPIRES_IN ?? '15m').trim() || '15m';
     const refreshExpiresIn = (process.env.JWT_REFRESH_EXPIRES_IN ?? '7d').trim() || '7d';
 
-    const accessToken = await this.jwtService.signAsync(
-      { sub: userId, email },
-      {
-        secret: accessSecret,
-        expiresIn: accessExpiresIn as `${number}${'s' | 'm' | 'h' | 'd'}`,
-      },
-    );
+    const accessToken = await this.jwtService.signAsync({ sub: userId, email });
 
     const refreshToken = randomBytes(48).toString('hex');
     const expiresAt = new Date(Date.now() + this.parseDuration(refreshExpiresIn));
 
-    await this.prisma.refreshToken.create({
-      data: { token: refreshToken, userId, expiresAt },
-    });
+    try {
+      await this.prisma.refreshToken.create({
+        data: { token: refreshToken, userId, expiresAt },
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao salvar sessão';
+      console.error('refreshToken.create falhou:', message);
+      throw new InternalServerErrorException(
+        'Banco desatualizado. Rode: pnpm db:fix',
+      );
+    }
 
     return {
       accessToken,
