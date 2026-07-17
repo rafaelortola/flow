@@ -174,6 +174,15 @@ function fillSelect(id, items, emptyLabel = 'Selecione') {
     items.map((x) => `<option value="${typeof x === 'string' ? x : x.name}">${typeof x === 'string' ? x : x.name}</option>`).join('');
 }
 
+function setModalFieldsRequired(type) {
+  const isExpense = type === 'expense';
+  const isIncome = type === 'income';
+  document.getElementById('fName').required = isExpense;
+  document.getElementById('fAmount').required = isExpense;
+  document.getElementById('fSource').required = isIncome;
+  document.getElementById('fIncomeAmount').required = isIncome;
+}
+
 function openModal(type) {
   clearModalError();
   modal.classList.remove('hidden');
@@ -181,6 +190,7 @@ function openModal(type) {
   document.getElementById('expenseFields').classList.toggle('hidden', type !== 'expense');
   document.getElementById('incomeFields').classList.toggle('hidden', type !== 'income');
   document.getElementById('modalTitle').textContent = type === 'income' ? 'Recebível' : 'Despesa';
+  setModalFieldsRequired(type);
 }
 
 function closeModal() {
@@ -215,6 +225,9 @@ function openExpenseModal(group, item = null) {
 
 function openIncomeModal(item = null) {
   openModal('income');
+  document.getElementById('modalId').value = '';
+  document.getElementById('fSource').value = '';
+  fIncomeAmount.value = '';
   if (item) {
     document.getElementById('modalId').value = item.id;
     document.getElementById('fSource').value = item.source;
