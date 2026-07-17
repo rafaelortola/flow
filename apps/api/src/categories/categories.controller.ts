@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { CategoryType } from '@financeflow/database';
+import { CategoryType } from '@prisma/client';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto/categories.dto';
 import { CurrentUser, AuthUser } from '../common/decorators/current-user.decorator';

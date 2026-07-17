@@ -6,7 +6,7 @@ Sistema SaaS de controle financeiro pessoal.
 
 - **Frontend:** Next.js 15, TypeScript, Tailwind CSS, shadcn-style UI
 - **Backend:** NestJS REST API
-- **Database:** PostgreSQL + Prisma
+- **Database:** PostgreSQL + Prisma (na raiz, estilo JANIN)
 - **Auth:** JWT + Refresh Token (HttpOnly cookie)
 
 ## Módulos
@@ -19,76 +19,57 @@ Sistema SaaS de controle financeiro pessoal.
 - Relatórios (PDF, Excel, CSV)
 - Perfil
 
-## Desenvolvimento local
+## Desenvolvimento local (Windows)
 
-### Pré-requisitos
+### 3 passos — igual JANIN
 
-- Node.js 20+
-- pnpm (`npm install -g pnpm`)
-- PostgreSQL local (sem Docker)
-
-### Windows — conectar BD de uma vez
-
-**Opcao A — so rodar `pnpm dev` (mais facil)**
-
-1. Abra o `.env` e adicione a senha do postgres:
-   ```env
-   POSTGRES_ADMIN_PASSWORD=SUA_SENHA_DO_POSTGRES
+1. **Crie o banco** no pgAdmin ou psql:
+   ```sql
+   CREATE DATABASE financeflow;
    ```
-2. Rode:
+
+2. **Configure o `.env`:**
    ```powershell
-   git pull origin main
+   copy .env.example .env
+   ```
+   Edite e coloque a senha do **postgres**:
+   ```env
+   DATABASE_URL=postgresql://postgres:SUA_SENHA@localhost:5432/financeflow
+   ```
+
+3. **Instale e rode:**
+   ```powershell
    pnpm install
+   pnpm setup
    pnpm dev
    ```
-   Na primeira vez, o projeto **cria sozinho** o usuario/banco `financeflow`.
 
-**Opcao B — script completo**
+**Login demo:** `demo@financeflow.com` / `demo123456`
+
+### Setup automático (Windows)
+
+Se preferir que o script faça tudo (cria banco, .env, push, seed):
 
 ```powershell
 .\scripts\setup-all.ps1 -PostgresPassword "SUA_SENHA_DO_POSTGRES"
 ```
 
-**Login:** `demo@financeflow.com` / `demo123456`
-
-### Setup manual (passo a passo)
-
-```bash
-cp .env.example .env
-pnpm install
-pnpm --filter @financeflow/database migrate:deploy
-pnpm db:seed
-pnpm dev
-```
-
-> `pnpm install` e `pnpm dev` já rodam `prisma generate` automaticamente. Se a API acusar que `@financeflow/database` não existe, rode: `pnpm db:prepare`
-
-**PostgreSQL local:** crie o banco e ajuste `DATABASE_URL` no `.env`:
-
-```sql
-CREATE USER financeflow WITH PASSWORD 'financeflow';
-CREATE DATABASE financeflow OWNER financeflow;
-```
-
-```env
-DATABASE_URL=postgresql://financeflow:financeflow@localhost:5432/financeflow
-```
-
-**Failed to fetch:** quase sempre a API não está rodando ou CORS bloqueou a porta do frontend. Confira se `apps/api` subiu em http://localhost:3001/api/v1. Se o Next.js usar outra porta (ex.: 3002), reinicie com `pnpm dev` após `git pull` (CORS em dev aceita qualquer porta localhost).
+### URLs
 
 - Web: http://localhost:3000
 - API: http://localhost:3001/api/v1
 
-### Usuário demo
+### Troubleshooting
 
-- Email: `demo@financeflow.com`
-- Senha: `demo123456`
+| Problema | Solução |
+|----------|---------|
+| `role "financeflow" does not exist` | Use `postgres` no `.env` (não precisa criar usuário extra) |
+| `Failed to fetch` | API não está rodando — confira http://localhost:3001/api/v1 |
+| Frontend em outra porta (3002) | Normal se 3000 estiver ocupada — CORS aceita qualquer localhost |
 
 ## MCP Postgres (Cursor Desktop)
 
-Para a IA consultar seu Postgres local diretamente no Cursor, veja [docs/MCP-POSTGRES.md](docs/MCP-POSTGRES.md).
-
-Configuração rápida: `.env` com `DATABASE_URL` → Settings → MCP → ativar `financeflow-postgres`.
+Veja [docs/MCP-POSTGRES.md](docs/MCP-POSTGRES.md).
 
 ## Docker (stack completa)
 
@@ -96,13 +77,9 @@ Configuração rápida: `.env` com `DATABASE_URL` → Settings → MCP → ativa
 docker compose up --build
 ```
 
-Inclui serviço de backup automático (`pg_dump` diário em `./backups`).
-
 ## Testes
 
 ```bash
-docker compose up db -d
-pnpm --filter @financeflow/database migrate:deploy
 pnpm test
 pnpm --filter @financeflow/api test:e2e
 ```
@@ -110,9 +87,8 @@ pnpm --filter @financeflow/api test:e2e
 ## Estrutura
 
 ```
+prisma/          Schema, seed e migrations
 apps/
-  api/     NestJS backend
-  web/     Next.js frontend
-packages/
-  database/  Prisma schema e client
+  api/           NestJS backend
+  web/           Next.js frontend
 ```

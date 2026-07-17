@@ -1,5 +1,5 @@
-# FinanceFlow — setup completo (Windows)
-# Cria banco, .env, instala deps, migrate, seed e valida tudo.
+# FinanceFlow — setup completo (Windows, estilo JANIN)
+# Cria banco, .env, instala deps, prisma db push, seed e inicia o app.
 #
 # Uso:
 #   .\scripts\setup-all.ps1
@@ -7,8 +7,6 @@
 param(
   [string]$PostgresUser = "postgres",
   [string]$PostgresPassword = "",
-  [string]$DbUser = "financeflow",
-  [string]$DbPassword = "financeflow",
   [string]$DbName = "financeflow",
   [int]$DbPort = 5432,
   [switch]$SkipDev
@@ -50,11 +48,11 @@ function Invoke-Psql($PsqlPath, $Sql, $User, $Password) {
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Yellow
-Write-Host "  FinanceFlow — Setup completo Windows  " -ForegroundColor Yellow
+Write-Host "  FinanceFlow — Setup Windows (JANIN)   " -ForegroundColor Yellow
 Write-Host "========================================" -ForegroundColor Yellow
 Write-Host "Projeto: $ProjectRoot"
 
-$total = 8
+$total = 7
 
 # 1. Node / pnpm
 Write-Step 1 $total "Verificando Node.js e pnpm..."
@@ -89,39 +87,31 @@ if (-not $PostgresPassword) {
   )
 }
 
-# 3. Criar banco e usuario
-Write-Step 3 $total "Criando banco '$DbName' e usuario '$DbUser'..."
-$sqlCreate = @"
-DO `$`$ BEGIN
-  CREATE ROLE $DbUser WITH LOGIN PASSWORD '$DbPassword';
-EXCEPTION WHEN duplicate_object THEN
-  ALTER ROLE $DbUser WITH LOGIN PASSWORD '$DbPassword';
-END `$`$;
-
-DO `$`$ BEGIN
-  CREATE DATABASE $DbName OWNER $DbUser;
-EXCEPTION WHEN duplicate_database THEN NULL;
-END `$`$;
-
-GRANT ALL PRIVILEGES ON DATABASE $DbName TO $DbUser;
-"@
-
-try {
-  Invoke-Psql $psql $sqlCreate $PostgresUser $PostgresPassword
-  Write-Ok "Banco '$DbName' pronto"
-} catch {
-  Write-Fail "Nao consegui criar o banco. Senha do postgres correta?"
-  Write-Host "  Tente: .\scripts\setup-all.ps1 -PostgresPassword 'SUA_SENHA'" -ForegroundColor Yellow
-  exit 1
+# 3. Criar banco (usuario postgres — sem role extra)
+Write-Step 3 $total "Criando banco '$DbName'..."
+$env:PGPASSWORD = $PostgresPassword
+$env:PGCLIENTENCODING = "UTF8"
+$dbExists = & $psql -U $PostgresUser -h localhost -p $DbPort -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$DbName'"
+if ($dbExists -match "1") {
+  Write-Ok "Banco '$DbName' ja existe"
+} else {
+  try {
+    & $psql -U $PostgresUser -h localhost -p $DbPort -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE $DbName;"
+    if ($LASTEXITCODE -ne 0) { throw "psql falhou" }
+    Write-Ok "Banco '$DbName' criado"
+  } catch {
+    Write-Fail "Nao consegui criar o banco. Senha do postgres correta?"
+    Write-Host "  Tente: .\scripts\setup-all.ps1 -PostgresPassword 'SUA_SENHA'" -ForegroundColor Yellow
+    exit 1
+  }
 }
 
 # 4. .env
 Write-Step 4 $total "Configurando .env..."
-$databaseUrl = "postgresql://${DbUser}:${DbPassword}@localhost:${DbPort}/${DbName}"
+$encodedPassword = [uri]::EscapeDataString($PostgresPassword)
+$databaseUrl = "postgresql://${PostgresUser}:${encodedPassword}@localhost:${DbPort}/${DbName}"
 $envContent = @"
 DATABASE_URL=$databaseUrl
-POSTGRES_ADMIN_USER=postgres
-POSTGRES_ADMIN_PASSWORD=$PostgresPassword
 JWT_ACCESS_SECRET=change-me-access-secret-min-32-chars
 JWT_REFRESH_SECRET=change-me-refresh-secret-min-32-chars
 JWT_ACCESS_EXPIRES_IN=15m
@@ -131,7 +121,7 @@ PORT=3001
 WEB_ORIGIN=http://localhost:3000
 "@
 Set-Content -Path ".env" -Value $envContent -Encoding UTF8
-Write-Ok ".env criado com DATABASE_URL"
+Write-Ok ".env criado com DATABASE_URL (usuario postgres)"
 
 # 5. pnpm install
 Write-Step 5 $total "Instalando dependencias (pnpm install)..."
@@ -139,25 +129,17 @@ pnpm install
 if ($LASTEXITCODE -ne 0) { Write-Fail "pnpm install falhou"; exit 1 }
 Write-Ok "Dependencias instaladas"
 
-# 6. Prisma generate + migrate
-Write-Step 6 $total "Gerando Prisma Client e aplicando migrations..."
-pnpm db:prepare
-if ($LASTEXITCODE -ne 0) { Write-Fail "db:prepare falhou"; exit 1 }
-pnpm --filter @financeflow/database migrate:deploy
-if ($LASTEXITCODE -ne 0) { Write-Fail "migrate falhou"; exit 1 }
-Write-Ok "Banco migrado"
+# 6. Prisma push + seed
+Write-Step 6 $total "Sincronizando schema e criando usuario demo..."
+pnpm setup
+if ($LASTEXITCODE -ne 0) { Write-Fail "setup falhou (db push / seed)"; exit 1 }
+Write-Ok "Banco sincronizado + demo criado"
 
-# 7. Seed
-Write-Step 7 $total "Criando usuario demo..."
-pnpm db:seed
-if ($LASTEXITCODE -ne 0) { Write-Fail "seed falhou"; exit 1 }
-Write-Ok "Usuario demo criado"
-
-# 8. Validacao
-Write-Step 8 $total "Validando setup..."
+# 7. Validacao
+Write-Step 7 $total "Validando setup..."
 pnpm mcp:postgres:check
-if ($LASTEXITCODE -ne 0) { Write-Fail "Validacao MCP/Postgres falhou"; exit 1 }
-Write-Ok "Postgres + MCP OK"
+if ($LASTEXITCODE -ne 0) { Write-Fail "Validacao Postgres falhou"; exit 1 }
+Write-Ok "Postgres OK"
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Green
@@ -168,8 +150,6 @@ Write-Host "  Login:  demo@financeflow.com"
 Write-Host "  Senha:  demo123456"
 Write-Host "  Web:    http://localhost:3000"
 Write-Host "  API:    http://localhost:3001/api/v1"
-Write-Host ""
-Write-Host "  MCP Cursor: financeflow-postgres (Settings > MCP)" -ForegroundColor DarkGray
 Write-Host ""
 
 if (-not $SkipDev) {

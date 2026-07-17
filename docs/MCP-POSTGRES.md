@@ -19,7 +19,7 @@ Conecta o **Cursor Desktop** ao seu PostgreSQL local via [Model Context Protocol
 3. Arquivo `.env` na raiz com `DATABASE_URL` (mesmo do FinanceFlow)
 
 ```env
-DATABASE_URL=postgresql://financeflow:financeflow@localhost:5432/financeflow
+DATABASE_URL=postgresql://postgres:SUA_SENHA@localhost:5432/financeflow
 ```
 
 ## Configuração

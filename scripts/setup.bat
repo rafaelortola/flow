@@ -5,27 +5,16 @@ echo.
 
 if not exist .env (
   copy .env.example .env
-  echo Arquivo .env criado. Ajuste DATABASE_URL se necessario.
+  echo Arquivo .env criado. Coloque SUA_SENHA do postgres em DATABASE_URL.
+  exit /b 1
 )
 
-echo [1/5] Instalando dependencias...
+echo [1/3] Instalando dependencias...
 call pnpm install
 if errorlevel 1 goto :error
 
-echo [2/5] Gerando Prisma Client...
-call pnpm --filter @financeflow/database generate
-if errorlevel 1 goto :error
-
-echo [3/5] Compilando pacote database...
-call pnpm --filter @financeflow/database build
-if errorlevel 1 goto :error
-
-echo [4/5] Aplicando migrations...
-call pnpm --filter @financeflow/database migrate:deploy
-if errorlevel 1 goto :error
-
-echo [5/5] Criando usuario demo...
-call pnpm db:seed
+echo [2/3] Sincronizando banco (prisma db push + seed)...
+call pnpm setup
 if errorlevel 1 goto :error
 
 echo.

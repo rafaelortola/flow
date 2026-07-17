@@ -1,4 +1,4 @@
-import { CategoryType } from '@financeflow/database';
+import { CategoryType } from '@prisma/client';
 import { IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class CreateCategoryDto {

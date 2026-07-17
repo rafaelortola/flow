@@ -28,7 +28,7 @@ if (-not (Test-Path .env)) {
 $ok = (Test-Item "Node.js" { node -v }) -and $ok
 $ok = (Test-Item "pnpm" { pnpm -v }) -and $ok
 $ok = (Test-Item "node_modules" { if (-not (Test-Path node_modules)) { throw "rode pnpm install" } }) -and $ok
-$ok = (Test-Item "Prisma client" { pnpm db:prepare }) -and $ok
+$ok = (Test-Item "Prisma client" { pnpm db:generate }) -and $ok
 $ok = (Test-Item "Postgres + MCP" { pnpm mcp:postgres:check }) -and $ok
 
 Write-Host ""

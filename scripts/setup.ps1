@@ -1,28 +1,20 @@
-# FinanceFlow - setup completo para Windows
+# FinanceFlow — setup rapido (Windows, estilo JANIN)
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot\..
 
-Write-Host "=== FinanceFlow Setup (Windows) ===" -ForegroundColor Cyan
+Write-Host "=== FinanceFlow Setup ===" -ForegroundColor Cyan
 
 if (-not (Test-Path .env)) {
   Copy-Item .env.example .env
-  Write-Host "Arquivo .env criado. Ajuste DATABASE_URL se necessario." -ForegroundColor Yellow
+  Write-Host "Arquivo .env criado. Coloque SUA_SENHA do postgres em DATABASE_URL." -ForegroundColor Yellow
+  exit 1
 }
 
-Write-Host "[1/5] Instalando dependencias..." -ForegroundColor Green
+Write-Host "[1/3] Instalando dependencias..." -ForegroundColor Green
 pnpm install
 
-Write-Host "[2/5] Gerando Prisma Client..." -ForegroundColor Green
-pnpm --filter @financeflow/database generate
-
-Write-Host "[3/5] Compilando pacote database..." -ForegroundColor Green
-pnpm --filter @financeflow/database build
-
-Write-Host "[4/5] Aplicando migrations..." -ForegroundColor Green
-pnpm --filter @financeflow/database migrate:deploy
-
-Write-Host "[5/5] Criando usuario demo..." -ForegroundColor Green
-pnpm db:seed
+Write-Host "[2/3] Sincronizando banco (prisma db push)..." -ForegroundColor Green
+pnpm setup
 
 Write-Host ""
 Write-Host "=== Pronto! ===" -ForegroundColor Cyan

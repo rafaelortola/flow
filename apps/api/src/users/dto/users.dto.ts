@@ -1,5 +1,5 @@
 import { IsEmail, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
-import { Theme } from '@financeflow/database';
+import { Theme } from '@prisma/client';
 
 export class UpdateProfileDto {
   @IsOptional()

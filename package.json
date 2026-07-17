@@ -2,25 +2,35 @@
   "name": "financeflow",
   "private": true,
   "scripts": {
-    "postinstall": "pnpm db:prepare",
-    "dev": "node scripts/ensure-database.js && pnpm --parallel --filter @financeflow/api --filter @financeflow/web dev",
-    "db:ensure": "node scripts/ensure-database.js",
-    "db:create": "node scripts/create-db.js",
-    "build": "pnpm db:prepare && pnpm --filter @financeflow/api build && pnpm --filter @financeflow/web build",
-    "test": "pnpm db:prepare && pnpm --filter @financeflow/api test",
-    "db:prepare": "pnpm --filter @financeflow/database generate && pnpm --filter @financeflow/database build",
-    "db:generate": "pnpm --filter @financeflow/database generate",
-    "db:migrate": "pnpm --filter @financeflow/database migrate",
-    "db:seed": "pnpm --filter @financeflow/database seed",
+    "postinstall": "prisma generate",
+    "dev": "pnpm --parallel --filter @financeflow/api --filter @financeflow/web dev",
+    "build": "prisma generate && pnpm --filter @financeflow/api build && pnpm --filter @financeflow/web build",
+    "test": "prisma generate && pnpm --filter @financeflow/api test",
+    "setup": "prisma generate && prisma db push && prisma db seed",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "prisma db seed",
     "mcp:postgres": "node scripts/mcp-postgres.js",
     "mcp:postgres:check": "node scripts/mcp-postgres.js --check",
     "validate": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validate.ps1",
     "setup:all": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-all.ps1"
   },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "devDependencies": {
     "@modelcontextprotocol/server-postgres": "^0.6.2",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^22.10.7",
+    "bcryptjs": "^2.4.3",
     "pg": "^8.13.1",
+    "prisma": "^6.3.1",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.3.1"
   },
   "engines": {
     "node": ">=20"

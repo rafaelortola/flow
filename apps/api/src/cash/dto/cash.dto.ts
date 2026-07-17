@@ -1,4 +1,4 @@
-import { CashEntryType } from '@financeflow/database';
+import { CashEntryType } from '@prisma/client';
 import { Type } from 'class-transformer';
 import { IsDateString, IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 

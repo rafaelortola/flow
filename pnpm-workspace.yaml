@@ -1,6 +1,5 @@
 packages:
   - "apps/*"
-  - "packages/*"
 
 # Allow installing packages published within the last 24h (pnpm 11 default blocks them).
 minimumReleaseAge: 0
