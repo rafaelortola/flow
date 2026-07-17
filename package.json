@@ -1,45 +1,22 @@
 {
   "name": "financeflow",
+  "version": "2.0.0",
   "private": true,
+  "description": "FinanceFlow — HTML + CSS + JS + Node.js + PostgreSQL",
+  "main": "server.js",
   "scripts": {
-    "postinstall": "prisma generate",
-    "dev": "concurrently -n api,web -c blue,green \"pnpm --filter @financeflow/api dev\" \"pnpm --filter @financeflow/web dev\"",
-    "dev:api": "pnpm --filter @financeflow/api dev",
-    "dev:web": "pnpm --filter @financeflow/web dev",
-    "build": "prisma generate && pnpm --filter @financeflow/api build && pnpm --filter @financeflow/web build",
-    "test": "prisma generate && pnpm --filter @financeflow/api test",
-    "setup": "prisma generate && prisma db push && prisma db seed",
-    "db:fix": "prisma generate && prisma db push && prisma db seed",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:migrate": "prisma migrate dev",
-    "db:seed": "prisma db seed",
-    "db:reset-demo": "prisma db seed",
-    "test:login": "node scripts/test-login.js",
-    "verify:login": "node scripts/verify-login.js",
-    "mcp:postgres": "node scripts/mcp-postgres.js",
-    "mcp:postgres:check": "node scripts/mcp-postgres.js --check",
-    "validate": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validate.ps1",
-    "setup:all": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-all.ps1"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
-  "devDependencies": {
-    "@modelcontextprotocol/server-postgres": "^0.6.2",
-    "@types/bcryptjs": "^2.4.6",
-    "@types/node": "^22.10.7",
-    "bcryptjs": "^2.4.3",
-    "concurrently": "^9.1.2",
-    "pg": "^8.13.1",
-    "prisma": "^6.3.1",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
-  },
-  "dependencies": {
-    "@prisma/client": "^6.3.1"
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "setup": "node scripts/setup-db.js"
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.1"
   }
 }

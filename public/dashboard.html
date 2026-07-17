@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinanceFlow — Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="header-left">
+        <div class="logo small">FF</div>
+        <span>FinanceFlow</span>
+      </div>
+      <div class="header-right">
+        <span id="userName">...</span>
+        <button id="logoutBtn" class="btn-outline">Sair</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <h2>Olá, <span id="userGreeting">...</span> 👋</h2>
+      <p class="subtitle">Resumo financeiro</p>
+
+      <div class="stats">
+        <div class="stat green">
+          <span class="label">Receitas</span>
+          <span class="value" id="totalIncome">R$ 0,00</span>
+        </div>
+        <div class="stat red">
+          <span class="label">Despesas</span>
+          <span class="value" id="totalExpense">R$ 0,00</span>
+        </div>
+        <div class="stat blue">
+          <span class="label">Saldo</span>
+          <span class="value" id="balance">R$ 0,00</span>
+        </div>
+        <div class="stat purple">
+          <span class="label">Categorias</span>
+          <span class="value" id="categories">0</span>
+        </div>
+      </div>
+
+      <div class="info-box">
+        <p>✅ Você está logado e conectado ao PostgreSQL <strong>financeflow</strong>.</p>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>
