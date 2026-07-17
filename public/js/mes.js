@@ -104,6 +104,7 @@ function renderIncomes(items) {
   document.getElementById('incomesTable').innerHTML = items.map((i) => `
     <tr>
       <td>${i.source}</td>
+      <td>${i.category || '—'}</td>
       <td>${formatMoney(i.amount)}</td>
       <td class="actions">
         <button class="btn-icon edit-income" data-id="${i.id}">✎</button>
@@ -170,10 +171,29 @@ function clearModalError() {
   modalError.classList.add('hidden');
 }
 
-function fillSelect(id, items, emptyLabel = 'Selecione') {
+function fillSelect(id, items, emptyLabel = 'Selecione', selectedValue = '') {
   const el = document.getElementById(id);
-  el.innerHTML = `<option value="">${emptyLabel}</option>` +
-    items.map((x) => `<option value="${typeof x === 'string' ? x : x.name}">${typeof x === 'string' ? x : x.name}</option>`).join('');
+  const names = items.map((x) => (typeof x === 'string' ? x : x.name));
+  let html = `<option value="">${emptyLabel}</option>` +
+    items.map((x) => {
+      const name = typeof x === 'string' ? x : x.name;
+      return `<option value="${name}">${name}</option>`;
+    }).join('');
+
+  if (selectedValue && !names.includes(selectedValue)) {
+    html += `<option value="${selectedValue}">${selectedValue}</option>`;
+  }
+
+  el.innerHTML = html;
+  if (selectedValue) el.value = selectedValue;
+}
+
+function categoriesByType(type) {
+  return categories.filter((c) => c.type === type);
+}
+
+async function refreshCategories() {
+  categories = await api('/categories');
 }
 
 function setModalFieldsRequired(type) {
@@ -204,10 +224,11 @@ function closeModal() {
   modalSubmitBtn.textContent = 'Salvar';
 }
 
-function openExpenseModal(group, item = null) {
+async function openExpenseModal(group, item = null) {
+  await refreshCategories();
   openModal('expense');
   document.getElementById('modalGroup').value = group;
-  fillSelect('fCategory', categories);
+  fillSelect('fCategory', categoriesByType('EXPENSE'), 'Selecione', item?.category || '');
   fillSelect('fSpendingType', options.spendingTypes);
   fillSelect('fDebtType', options.debtTypes);
   fillSelect('fStatus', options.paymentStatuses);
@@ -225,14 +246,18 @@ function openExpenseModal(group, item = null) {
   }
 }
 
-function openIncomeModal(item = null) {
+async function openIncomeModal(item = null) {
+  await refreshCategories();
   openModal('income');
   document.getElementById('modalId').value = '';
   document.getElementById('fSource').value = '';
+  document.getElementById('fIncomeCategory').value = '';
   fIncomeAmount.value = '';
+  fillSelect('fIncomeCategory', categoriesByType('INCOME'), 'Selecione', item?.category || '');
   if (item) {
     document.getElementById('modalId').value = item.id;
     document.getElementById('fSource').value = item.source;
+    document.getElementById('fIncomeCategory').value = item.category || '';
     fIncomeAmount.value = formatMoney(item.amount);
   }
 }
@@ -268,7 +293,10 @@ modalForm.addEventListener('submit', async (e) => {
         return;
       }
 
-      const body = { month, year, source, amount };
+      const body = {
+        month, year, source, amount,
+        category: document.getElementById('fIncomeCategory').value || null,
+      };
       if (id) await api(`/incomes/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
       else await api('/incomes', { method: 'POST', body: JSON.stringify(body) });
     } else {

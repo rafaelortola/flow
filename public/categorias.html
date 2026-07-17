@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinanceFlow — Categorias</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo small">FF</div>
+        <span>FinanceFlow</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/dashboard.html">Dashboard</a>
+        <a href="/mes.html">Controle Mensal</a>
+        <a href="/categorias.html" class="active">Categorias</a>
+      </nav>
+      <button id="logoutBtn" class="btn-outline sidebar-logout">Sair</button>
+    </aside>
+
+    <div class="content">
+      <header class="content-header">
+        <div>
+          <h1>Categorias</h1>
+          <p class="subtitle" id="userGreeting">...</p>
+        </div>
+      </header>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Nova categoria</h2>
+        </div>
+        <form id="categoryForm" class="inline-form">
+          <label>
+            Nome
+            <input type="text" id="categoryName" placeholder="Ex: Alimentação, Salário..." required />
+          </label>
+          <label>
+            Tipo
+            <select id="categoryType" required>
+              <option value="EXPENSE">Despesa</option>
+              <option value="INCOME">Recebível</option>
+            </select>
+          </label>
+          <button type="submit" class="btn-primary">Adicionar</button>
+        </form>
+        <p id="categoryError" class="error hidden" role="alert"></p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Lista de categorias</h2>
+          <div class="period-select">
+            <select id="filterType">
+              <option value="">Todas</option>
+              <option value="EXPENSE">Despesas</option>
+              <option value="INCOME">Recebíveis</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Tipo</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="categoriesTable"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/categorias.js"></script>
+</body>
+</html>

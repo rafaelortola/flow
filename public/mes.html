@@ -16,6 +16,7 @@
       <nav class="sidebar-nav">
         <a href="/dashboard.html">Dashboard</a>
         <a href="/mes.html" class="active">Controle Mensal</a>
+        <a href="/categorias.html">Categorias</a>
       </nav>
       <button id="logoutBtn" class="btn-outline sidebar-logout">Sair</button>
     </aside>
@@ -59,7 +60,7 @@
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Fonte</th><th>Valor</th><th></th></tr></thead>
+            <thead><tr><th>Fonte</th><th>Categoria</th><th>Valor</th><th></th></tr></thead>
             <tbody id="incomesTable"></tbody>
           </table>
         </div>
@@ -136,6 +137,7 @@
 
         <div id="incomeFields" class="hidden">
           <label>Fonte<input type="text" id="fSource" placeholder="Biz, EDS..." required /></label>
+          <label>Categoria<select id="fIncomeCategory"></select></label>
           <label>Valor<input type="text" id="fIncomeAmount" inputmode="numeric" placeholder="R$ 0,00" required /></label>
         </div>
 

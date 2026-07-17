@@ -7,11 +7,52 @@ function categoryRoutes(authMiddleware) {
   router.use(authMiddleware);
 
   router.get('/', async (req, res) => {
-    const result = await db.query(
-      `SELECT id, name, type FROM categories WHERE "userId" = $1 ORDER BY name`,
-      [req.user.sub],
-    );
+    const type = typeof req.query.type === 'string' ? req.query.type.toUpperCase() : null;
+    const params = [req.user.sub];
+    let sql = `SELECT id, name, type FROM categories WHERE "userId" = $1`;
+    if (type === 'EXPENSE' || type === 'INCOME') {
+      sql += ` AND type = $2`;
+      params.push(type);
+    }
+    sql += ` ORDER BY name`;
+    const result = await db.query(sql, params);
     res.json(result.rows);
+  });
+
+  router.post('/', async (req, res) => {
+    const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+    const type = typeof req.body?.type === 'string' ? req.body.type.toUpperCase() : 'EXPENSE';
+
+    if (!name) {
+      return res.status(400).json({ message: 'Informe o nome da categoria' });
+    }
+    if (type !== 'EXPENSE' && type !== 'INCOME') {
+      return res.status(400).json({ message: 'Tipo inválido. Use EXPENSE ou INCOME' });
+    }
+
+    const existing = await db.query(
+      `SELECT id FROM categories WHERE "userId" = $1 AND name = $2`,
+      [req.user.sub, name],
+    );
+    if (existing.rowCount) {
+      return res.status(409).json({ message: 'Já existe uma categoria com esse nome' });
+    }
+
+    const id = crypto.randomUUID();
+    const result = await db.query(
+      `INSERT INTO categories (id, "userId", name, type) VALUES ($1, $2, $3, $4) RETURNING id, name, type`,
+      [id, req.user.sub, name, type],
+    );
+    res.status(201).json(result.rows[0]);
+  });
+
+  router.delete('/:id', async (req, res) => {
+    const result = await db.query(
+      `DELETE FROM categories WHERE id = $1 AND "userId" = $2 RETURNING id`,
+      [req.params.id, req.user.sub],
+    );
+    if (!result.rowCount) return res.status(404).json({ message: 'Categoria não encontrada' });
+    res.json({ ok: true });
   });
 
   router.get('/options', (_req, res) => {
