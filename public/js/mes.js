@@ -60,10 +60,72 @@ function statusBadge(status) {
   return `<span class="badge ${cls}">${status || '—'}</span>`;
 }
 
+function formatInstallment(expense) {
+  const info = (expense.installment_info || '').trim();
+  const totalFromDb = expense.installment_total != null ? Number(expense.installment_total) : null;
+
+  if (!info && totalFromDb == null) return '—';
+
+  const fullMatch = info.match(/^(\d+)\s*de\s*(\d+)$/i);
+  if (fullMatch) {
+    const current = parseInt(fullMatch[1], 10);
+    const total = parseInt(fullMatch[2], 10);
+    if (current === total) return 'Última Parcela';
+    return `${current} de ${total}`;
+  }
+
+  const partialMatch = info.match(/^(\d+)\s*de\s*$/i);
+  if (partialMatch && totalFromDb) {
+    const current = parseInt(partialMatch[1], 10);
+    if (current === totalFromDb) return 'Última Parcela';
+    return `${current} de ${totalFromDb}`;
+  }
+
+  if (/^\d+$/.test(info) && totalFromDb) {
+    const current = parseInt(info, 10);
+    if (current === totalFromDb) return 'Última Parcela';
+    return `${current} de ${totalFromDb}`;
+  }
+
+  return info || '—';
+}
+
+function installmentInputValue(expense) {
+  const info = (expense.installment_info || '').trim();
+  const total = expense.installment_total != null ? Number(expense.installment_total) : null;
+  if (!info && total == null) return '';
+
+  const fullMatch = info.match(/^(\d+)\s*de\s*(\d+)$/i);
+  if (fullMatch) return `${fullMatch[1]} de ${fullMatch[2]}`;
+
+  const partialMatch = info.match(/^(\d+)\s*de\s*$/i);
+  if (partialMatch && total) return `${partialMatch[1]} de ${total}`;
+
+  return info;
+}
+
+function parseInstallmentInput(value) {
+  const trimmed = (value || '').trim();
+  if (!trimmed) return { installment_info: null, installment_total: null };
+
+  const fullMatch = trimmed.match(/^(\d+)\s*de\s*(\d+)$/i);
+  if (fullMatch) {
+    return {
+      installment_info: `${fullMatch[1]} de`,
+      installment_total: parseInt(fullMatch[2], 10),
+    };
+  }
+
+  return { installment_info: trimmed, installment_total: null };
+}
+
+const GROUPS_WITH_INSTALLMENT = new Set(['essential', 'nonessential', 'debt']);
+
 function renderExpenses(group, items) {
   const tbody = document.getElementById(`expenses-${group}`);
   const total = items.reduce((s, e) => s + Number(e.amount), 0);
   document.getElementById(`total-${group}`).textContent = formatMoney(total);
+  const showInstallment = GROUPS_WITH_INSTALLMENT.has(group);
 
   tbody.innerHTML = items.map((e) => `
     <tr>
@@ -71,6 +133,7 @@ function renderExpenses(group, items) {
       <td>${e.name}</td>
       <td>${formatMoney(e.amount)}</td>
       <td>${e.category || '—'}</td>
+      ${showInstallment ? `<td>${formatInstallment(e)}</td>` : ''}
       <td>${statusBadge(e.payment_status)}</td>
       <td class="actions">
         <button class="btn-icon toggle-pay" data-id="${e.id}" data-status="${e.payment_status}" title="Alternar pago">✓</button>
@@ -241,7 +304,7 @@ async function openExpenseModal(group, item = null) {
     document.getElementById('fCategory').value = item.category || '';
     document.getElementById('fSpendingType').value = item.spending_type || '';
     document.getElementById('fDebtType').value = item.debt_type || '';
-    document.getElementById('fInstallment').value = item.installment_info || '';
+    document.getElementById('fInstallment').value = installmentInputValue(item);
     document.getElementById('fStatus').value = item.payment_status || 'Não pago';
   }
 }
@@ -300,6 +363,7 @@ modalForm.addEventListener('submit', async (e) => {
       if (id) await api(`/incomes/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
       else await api('/incomes', { method: 'POST', body: JSON.stringify(body) });
     } else {
+      const installment = parseInstallmentInput(document.getElementById('fInstallment').value);
       const body = {
         month, year,
         expense_group: document.getElementById('modalGroup').value,
@@ -309,7 +373,8 @@ modalForm.addEventListener('submit', async (e) => {
         category: document.getElementById('fCategory').value || null,
         spending_type: document.getElementById('fSpendingType').value || null,
         debt_type: document.getElementById('fDebtType').value || null,
-        installment_info: document.getElementById('fInstallment').value || null,
+        installment_info: installment.installment_info,
+        installment_total: installment.installment_total,
         payment_status: document.getElementById('fStatus').value || 'Não pago',
       };
       if (id) await api(`/expenses/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
