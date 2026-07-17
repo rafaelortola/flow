@@ -35,6 +35,20 @@ async function refreshAccessToken(): Promise<string | null> {
   return data.accessToken;
 }
 
+function parseApiError(body: unknown, status: number): string {
+  if (!body || typeof body !== 'object') {
+    return `Erro na requisição (HTTP ${status})`;
+  }
+  const record = body as Record<string, unknown>;
+  const message = record.message;
+  if (Array.isArray(message)) return message.join(', ');
+  if (typeof message === 'string' && message.length > 0) return message;
+  if (typeof record.error === 'string' && record.error.length > 0) {
+    return `${record.error} (HTTP ${status})`;
+  }
+  return `Erro na requisição (HTTP ${status})`;
+}
+
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
@@ -74,8 +88,8 @@ export async function apiFetch<T>(
   }
 
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: 'Erro na requisição' }));
-    throw new Error(error.message ?? 'Erro na requisição');
+    const error = await res.json().catch(() => null);
+    throw new Error(parseApiError(error, res.status));
   }
 
   if (res.status === 204) return undefined as T;

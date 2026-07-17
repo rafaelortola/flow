@@ -13,6 +13,8 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
+    "db:reset-demo": "prisma db seed",
+    "test:login": "node scripts/test-login.js",
     "mcp:postgres": "node scripts/mcp-postgres.js",
     "mcp:postgres:check": "node scripts/mcp-postgres.js --check",
     "validate": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validate.ps1",

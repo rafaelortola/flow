@@ -51,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email, password }),
     });
     setAccessToken(data.accessToken);
+    setUser(data.user);
     await refreshUser();
   };
 
@@ -60,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ name, email, password }),
     });
     setAccessToken(data.accessToken);
+    setUser(data.user);
     await refreshUser();
   };
 

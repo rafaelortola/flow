@@ -67,17 +67,20 @@ export class AuthService {
   }
 
   private async issueTokens(userId: string, email: string) {
+    const accessSecret = (process.env.JWT_ACCESS_SECRET ?? 'dev-secret').trim();
+    const accessExpiresIn = (process.env.JWT_ACCESS_EXPIRES_IN ?? '15m').trim() || '15m';
+    const refreshExpiresIn = (process.env.JWT_REFRESH_EXPIRES_IN ?? '7d').trim() || '7d';
+
     const accessToken = await this.jwtService.signAsync(
       { sub: userId, email },
       {
-        secret: process.env.JWT_ACCESS_SECRET ?? 'dev-secret',
-        expiresIn: (process.env.JWT_ACCESS_EXPIRES_IN ?? '15m') as `${number}${'s' | 'm' | 'h' | 'd'}`,
+        secret: accessSecret,
+        expiresIn: accessExpiresIn as `${number}${'s' | 'm' | 'h' | 'd'}`,
       },
     );
 
     const refreshToken = randomBytes(48).toString('hex');
-    const expiresIn = process.env.JWT_REFRESH_EXPIRES_IN ?? '7d';
-    const expiresAt = new Date(Date.now() + this.parseDuration(expiresIn));
+    const expiresAt = new Date(Date.now() + this.parseDuration(refreshExpiresIn));
 
     await this.prisma.refreshToken.create({
       data: { token: refreshToken, userId, expiresAt },
