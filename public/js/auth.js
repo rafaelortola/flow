@@ -17,13 +17,18 @@ async function api(path, options = {}) {
   const token = getToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`/api${path}`, { ...options, headers });
+  let res;
+  try {
+    res = await fetch(`/api${path}`, { ...options, headers });
+  } catch {
+    throw new Error('Servidor indisponível. Inicie com npm start e acesse http://localhost:3000');
+  }
 
   let data = null;
   try {
     data = await res.json();
   } catch {
-    data = { message: 'Resposta inválida do servidor' };
+    data = { message: 'Resposta inválida do servidor. Reinicie o FinanceFlow (npm start).' };
   }
 
   if (!res.ok) {

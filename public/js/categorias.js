@@ -62,6 +62,8 @@ async function loadCategories() {
   renderCategories(items);
 }
 
+const submitBtn = categoryForm.querySelector('button[type="submit"]');
+
 categoryForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   clearError();
@@ -74,6 +76,9 @@ categoryForm.addEventListener('submit', async (e) => {
     return;
   }
 
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Salvando...';
+
   try {
     await api('/categories', {
       method: 'POST',
@@ -83,6 +88,9 @@ categoryForm.addEventListener('submit', async (e) => {
     await loadCategories();
   } catch (err) {
     showError(err.message || 'Erro ao criar categoria.');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Adicionar';
   }
 });
 
