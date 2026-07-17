@@ -1,3 +1,4 @@
+import './load-env';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
@@ -26,6 +27,10 @@ async function bootstrap() {
   const port = process.env.PORT ?? 3001;
   await app.listen(port);
   console.log(`API running on http://localhost:${port}/api/v1`);
+  console.log(`Database connected via DATABASE_URL`);
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('Failed to start API:', err.message);
+  process.exit(1);
+});

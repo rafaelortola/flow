@@ -27,37 +27,25 @@ Sistema SaaS de controle financeiro pessoal.
 - pnpm (`npm install -g pnpm`)
 - PostgreSQL local (sem Docker)
 
-### Forma mais fácil (Windows) — UM COMANDO SÓ
+### Windows — conectar BD de uma vez
 
-Abra PowerShell **como administrador não é necessário**, na pasta do projeto:
+**Passo 1** (só na primeira vez — cria banco no Postgres):
 
 ```powershell
 cd C:\Users\Pichau\Documents\flow
 git pull origin main
-.\scripts\setup-all.ps1
-```
-
-O script pergunta a **senha do postgres**, cria banco + usuário, `.env`, instala tudo, migra, seed e valida.
-
-Se souber a senha do postgres:
-
-```powershell
 .\scripts\setup-all.ps1 -PostgresPassword "SUA_SENHA_POSTGRES"
 ```
 
-Depois, para subir o app:
+**Passo 2** (sempre que for desenvolver):
 
 ```powershell
 pnpm dev
 ```
 
-Validar sem alterar nada:
+O `pnpm dev` agora **conecta ao banco, aplica migrations e cria demo** automaticamente antes de subir API + web.
 
-```powershell
-.\scripts\validate.ps1
-```
-
-**Login demo:** `demo@financeflow.com` / `demo123456`
+**Login:** `demo@financeflow.com` / `demo123456`
 
 ### Setup manual (passo a passo)
 

@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "postinstall": "pnpm db:prepare",
-    "dev": "pnpm db:prepare && pnpm --parallel --filter @financeflow/api --filter @financeflow/web dev",
+    "dev": "node scripts/ensure-database.js && pnpm --parallel --filter @financeflow/api --filter @financeflow/web dev",
+    "db:ensure": "node scripts/ensure-database.js",
     "build": "pnpm db:prepare && pnpm --filter @financeflow/api build && pnpm --filter @financeflow/web build",
     "test": "pnpm db:prepare && pnpm --filter @financeflow/api test",
     "db:prepare": "pnpm --filter @financeflow/database generate && pnpm --filter @financeflow/database build",
