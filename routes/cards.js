@@ -8,6 +8,12 @@ function asyncHandler(fn) {
   };
 }
 
+function isMissingCardsSchema(err) {
+  if (err.code === '42P01' || err.code === '42703') return true;
+  const msg = String(err.message || '');
+  return /relation "cards"/i.test(msg) || /card_id/i.test(msg);
+}
+
 const DEFAULT_CARD_COLOR = '#A855F7';
 
 function normalizeColor(value) {
@@ -30,13 +36,22 @@ function cardRoutes(authMiddleware) {
   router.use(authMiddleware);
 
   router.get('/', asyncHandler(async (req, res) => {
-    const result = await db.query(
-      `SELECT id, name, color, closing_day, due_day
-       FROM cards WHERE "userId" = $1
-       ORDER BY name`,
-      [req.user.sub],
-    );
-    res.json(result.rows);
+    try {
+      const result = await db.query(
+        `SELECT id, name, color, closing_day, due_day
+         FROM cards WHERE "userId" = $1
+         ORDER BY name`,
+        [req.user.sub],
+      );
+      res.json(result.rows);
+    } catch (err) {
+      if (isMissingCardsSchema(err)) {
+        return res.status(503).json({
+          message: 'Tabela de cartões não encontrada. Reinicie o servidor ou execute npm run setup.',
+        });
+      }
+      throw err;
+    }
   }));
 
   router.post('/', asyncHandler(async (req, res) => {
