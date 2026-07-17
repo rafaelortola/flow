@@ -44,7 +44,7 @@ CREATE DATABASE financeflow OWNER financeflow;
 DATABASE_URL=postgresql://financeflow:financeflow@localhost:5432/financeflow
 ```
 
-**Windows + pnpm 11:** se aparecer `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`, faça `git pull` (o projeto já define `minimumReleaseAge: 0`). Se aparecer `ERR_PNPM_IGNORED_BUILDS`, faça `git pull` e rode `pnpm install` de novo — o `allowBuilds` em `pnpm-workspace.yaml` autoriza Prisma, esbuild e sharp.
+**Failed to fetch:** quase sempre a API não está rodando ou CORS bloqueou a porta do frontend. Confira se `apps/api` subiu em http://localhost:3001/api/v1. Se o Next.js usar outra porta (ex.: 3002), reinicie com `pnpm dev` após `git pull` (CORS em dev aceita qualquer porta localhost).
 
 - Web: http://localhost:3000
 - API: http://localhost:3001/api/v1

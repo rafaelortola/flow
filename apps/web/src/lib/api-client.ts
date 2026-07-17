@@ -48,11 +48,18 @@ export async function apiFetch<T>(
     (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
   }
 
-  let res = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers,
-    credentials: 'include',
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers,
+      credentials: 'include',
+    });
+  } catch {
+    throw new Error(
+      `Não foi possível conectar à API em ${API_URL}. Verifique se o backend está rodando (pnpm dev).`,
+    );
+  }
 
   if (res.status === 401 && !path.startsWith('/auth/')) {
     const newToken = await refreshAccessToken();
@@ -74,8 +81,6 @@ export async function apiFetch<T>(
   if (res.status === 204) return undefined as T;
   return res.json();
 }
-
-export async function apiDownload(path: string, filename: string) {
   const token = getAccessToken();
   const res = await fetch(`${API_URL}${path}`, {
     credentials: 'include',
