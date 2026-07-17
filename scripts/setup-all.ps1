@@ -120,6 +120,8 @@ Write-Step 4 $total "Configurando .env..."
 $databaseUrl = "postgresql://${DbUser}:${DbPassword}@localhost:${DbPort}/${DbName}"
 $envContent = @"
 DATABASE_URL=$databaseUrl
+POSTGRES_ADMIN_USER=postgres
+POSTGRES_ADMIN_PASSWORD=$PostgresPassword
 JWT_ACCESS_SECRET=change-me-access-secret-min-32-chars
 JWT_REFRESH_SECRET=change-me-refresh-secret-min-32-chars
 JWT_ACCESS_EXPIRES_IN=15m

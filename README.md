@@ -29,21 +29,25 @@ Sistema SaaS de controle financeiro pessoal.
 
 ### Windows — conectar BD de uma vez
 
-**Passo 1** (só na primeira vez — cria banco no Postgres):
+**Opcao A — so rodar `pnpm dev` (mais facil)**
+
+1. Abra o `.env` e adicione a senha do postgres:
+   ```env
+   POSTGRES_ADMIN_PASSWORD=SUA_SENHA_DO_POSTGRES
+   ```
+2. Rode:
+   ```powershell
+   git pull origin main
+   pnpm install
+   pnpm dev
+   ```
+   Na primeira vez, o projeto **cria sozinho** o usuario/banco `financeflow`.
+
+**Opcao B — script completo**
 
 ```powershell
-cd C:\Users\Pichau\Documents\flow
-git pull origin main
-.\scripts\setup-all.ps1 -PostgresPassword "SUA_SENHA_POSTGRES"
+.\scripts\setup-all.ps1 -PostgresPassword "SUA_SENHA_DO_POSTGRES"
 ```
-
-**Passo 2** (sempre que for desenvolver):
-
-```powershell
-pnpm dev
-```
-
-O `pnpm dev` agora **conecta ao banco, aplica migrations e cria demo** automaticamente antes de subir API + web.
 
 **Login:** `demo@financeflow.com` / `demo123456`
 
