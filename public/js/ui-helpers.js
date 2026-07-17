@@ -65,3 +65,11 @@ function renderInstallmentCell(expense) {
 function formatPercent(value) {
   return `${Number(value || 0).toFixed(1)}%`;
 }
+
+function cardTag(name, color) {
+  if (!name || name === '—') return '—';
+  const tagColor = color || '#A855F7';
+  const bg = hexToRgba(tagColor, 0.18) || tagColor;
+  const border = hexToRgba(tagColor, 0.45) || tagColor;
+  return `<span class="category-tag" style="background:${bg};border-color:${border};color:${tagColor}">${name}</span>`;
+}

@@ -13,6 +13,7 @@ const params = new URLSearchParams(window.location.search);
 
 let categories = [];
 let categoryColorMap = new Map();
+let cards = [];
 let options = {};
 
 function formatMoney(v) {
@@ -97,6 +98,7 @@ function renderExpenses(group, items) {
   const total = items.reduce((s, e) => s + Number(e.amount), 0);
   document.getElementById(`total-${group}`).textContent = formatMoney(total);
   const showInstallment = GROUPS_WITH_INSTALLMENT.has(group);
+  const showCard = group === 'card';
 
   tbody.innerHTML = items.map((e) => `
     <tr>
@@ -104,6 +106,7 @@ function renderExpenses(group, items) {
       <td>${e.name}</td>
       <td>${formatMoney(e.amount)}</td>
       <td>${categoryTag(e.category || '—', categoryColorMap)}</td>
+      ${showCard ? `<td>${cardTag(e.card_name || '—', e.card_color)}</td>` : ''}
       ${showInstallment ? `<td>${renderInstallmentCell(e)}</td>` : ''}
       <td>${statusBadge(e.payment_status)}</td>
       <td class="actions">
@@ -222,6 +225,14 @@ function fillSelect(id, items, emptyLabel = 'Selecione', selectedValue = '') {
   if (selectedValue) el.value = selectedValue;
 }
 
+function fillCardSelect(id, items, emptyLabel = 'Selecione', selectedId = '') {
+  const el = document.getElementById(id);
+  let html = `<option value="">${emptyLabel}</option>` +
+    items.map((card) => `<option value="${card.id}">${card.name}</option>`).join('');
+  el.innerHTML = html;
+  if (selectedId) el.value = selectedId;
+}
+
 function categoriesByType(type) {
   return categories.filter((c) => c.type === type);
 }
@@ -229,6 +240,16 @@ function categoriesByType(type) {
 async function refreshCategories() {
   categories = await api('/categories');
   categoryColorMap = buildCategoryColorMap(categories);
+}
+
+async function refreshCards() {
+  cards = await api('/cards');
+}
+
+function setExpenseFieldVisibility(group) {
+  const isCard = group === 'card';
+  document.getElementById('cardField').classList.toggle('hidden', !isCard);
+  document.getElementById('fCard').required = isCard;
 }
 
 function setModalFieldsRequired(type) {
@@ -254,16 +275,20 @@ function closeModal() {
   modal.classList.add('hidden');
   modalForm.reset();
   document.getElementById('modalId').value = '';
+  document.getElementById('cardField').classList.add('hidden');
+  document.getElementById('fCard').required = false;
   clearModalError();
   modalSubmitBtn.disabled = false;
   modalSubmitBtn.textContent = 'Salvar';
 }
 
 async function openExpenseModal(group, item = null) {
-  await refreshCategories();
+  await Promise.all([refreshCategories(), refreshCards()]);
   openModal('expense');
   document.getElementById('modalGroup').value = group;
+  setExpenseFieldVisibility(group);
   fillSelect('fCategory', categoriesByType('EXPENSE'), 'Selecione', item?.category || '');
+  fillCardSelect('fCard', cards, 'Selecione', item?.card_id || '');
   fillSelect('fSpendingType', options.spendingTypes);
   fillSelect('fDebtType', options.debtTypes);
   fillSelect('fStatus', options.paymentStatuses);
@@ -274,6 +299,7 @@ async function openExpenseModal(group, item = null) {
     document.getElementById('fName').value = item.name;
     document.getElementById('fAmount').value = item.amount;
     document.getElementById('fCategory').value = item.category || '';
+    document.getElementById('fCard').value = item.card_id || '';
     document.getElementById('fSpendingType').value = item.spending_type || '';
     document.getElementById('fDebtType').value = item.debt_type || '';
     document.getElementById('fInstallment').value = installmentInputValue(item);
@@ -335,10 +361,11 @@ modalForm.addEventListener('submit', async (e) => {
       if (id) await api(`/incomes/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
       else await api('/incomes', { method: 'POST', body: JSON.stringify(body) });
     } else {
+      const group = document.getElementById('modalGroup').value;
       const installment = parseInstallmentInput(document.getElementById('fInstallment').value);
       const body = {
         month, year,
-        expense_group: document.getElementById('modalGroup').value,
+        expense_group: group,
         due_date: document.getElementById('fDueDate').value || null,
         name: document.getElementById('fName').value,
         amount: parseFloat(document.getElementById('fAmount').value),
@@ -349,6 +376,14 @@ modalForm.addEventListener('submit', async (e) => {
         installment_total: installment.installment_total,
         payment_status: document.getElementById('fStatus').value || 'Não pago',
       };
+      if (group === 'card') {
+        const cardId = document.getElementById('fCard').value;
+        if (!cardId) {
+          showModalError('Selecione o cartão.');
+          return;
+        }
+        body.card_id = cardId;
+      }
       if (id) await api(`/expenses/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
       else await api('/expenses', { method: 'POST', body: JSON.stringify(body) });
     }
@@ -382,6 +417,7 @@ async function init() {
     document.getElementById('userGreeting').textContent = user.name || user.email;
     categories = await api('/categories');
     categoryColorMap = buildCategoryColorMap(categories);
+    cards = await api('/cards');
     options = await api('/categories/options');
     await loadAll();
   } catch {
