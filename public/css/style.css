@@ -595,6 +595,67 @@ textarea {
 .text-green { color: var(--green); }
 .text-red { color: var(--red); }
 
+.report-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.report-grid .panel {
+  margin-bottom: 0;
+}
+
+.chart-bars-tall {
+  height: 200px;
+}
+
+.ranked-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ranked-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 120px) 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.ranked-label {
+  font-size: 0.85rem;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ranked-track {
+  background: var(--bg);
+  border-radius: 999px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.ranked-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), #818cf8);
+  border-radius: 999px;
+  min-width: 0;
+}
+
+.ranked-value {
+  font-size: 0.85rem;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.ranked-percent {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
 @media (max-width: 768px) {
   .app-layout { flex-direction: column; }
   .sidebar {
@@ -614,4 +675,7 @@ textarea {
   .sidebar-logout { width: auto; margin-top: 0; margin-left: auto; }
   .stats-3, .stats-4 { grid-template-columns: repeat(2, 1fr); }
   .content { padding: 1rem; }
+  .report-grid { grid-template-columns: 1fr; }
+  .ranked-row { grid-template-columns: 1fr; gap: 0.35rem; }
+  .ranked-value { text-align: left; }
 }

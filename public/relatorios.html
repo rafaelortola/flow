@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinanceFlow — Relatórios</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo small">FF</div>
+        <span>FinanceFlow</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/dashboard.html">Dashboard</a>
+        <a href="/mes.html">Controle Mensal</a>
+        <a href="/categorias.html">Categorias</a>
+        <a href="/relatorios.html" class="active">Relatórios</a>
+      </nav>
+      <button id="logoutBtn" class="btn-outline sidebar-logout">Sair</button>
+    </aside>
+
+    <div class="content">
+      <header class="content-header">
+        <div>
+          <h1>Relatórios <span id="yearLabel">2026</span></h1>
+          <p class="subtitle" id="userGreeting">...</p>
+        </div>
+        <div class="period-select">
+          <select id="yearSelect"></select>
+          <button id="reloadBtn" class="btn-primary">Atualizar</button>
+        </div>
+      </header>
+
+      <div class="stats stats-3">
+        <div class="stat green">
+          <span class="label">Receitas no ano</span>
+          <span class="value" id="totalReceitas">R$ 0,00</span>
+        </div>
+        <div class="stat red">
+          <span class="label">Despesas no ano</span>
+          <span class="value" id="totalDespesas">R$ 0,00</span>
+        </div>
+        <div class="stat blue">
+          <span class="label">Saldo no ano</span>
+          <span class="value" id="totalSobra">R$ 0,00</span>
+        </div>
+      </div>
+
+      <section class="panel">
+        <div class="panel-header"><h2>Gastos por mês</h2></div>
+        <div id="monthlyExpenseChart" class="chart-bars chart-bars-tall"></div>
+      </section>
+
+      <div class="report-grid">
+        <section class="panel">
+          <div class="panel-header"><h2>Top categorias de gastos</h2></div>
+          <div id="topCategoriesChart" class="ranked-bars"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header"><h2>Gastos por tipo</h2></div>
+          <div id="groupsChart" class="ranked-bars"></div>
+        </section>
+      </div>
+
+      <section class="panel">
+        <div class="panel-header"><h2>Detalhamento por categoria</h2></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Categoria</th>
+                <th>Total</th>
+                <th>% do total</th>
+                <th>Lançamentos</th>
+              </tr>
+            </thead>
+            <tbody id="categoriesTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header"><h2>Receitas x Despesas por mês</h2></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Mês</th>
+                <th>Receitas</th>
+                <th>Despesas</th>
+                <th>Saldo</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="monthsTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="report-grid">
+        <section class="panel">
+          <div class="panel-header"><h2>Receitas por categoria</h2></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Categoria</th><th>Total</th><th>Lanç.</th></tr></thead>
+              <tbody id="incomeCategoriesTable"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header"><h2>Principais fontes de receita</h2></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Fonte</th><th>Total</th><th>Lanç.</th></tr></thead>
+              <tbody id="incomeSourcesTable"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/relatorios.js"></script>
+</body>
+</html>
