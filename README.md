@@ -26,11 +26,12 @@ Sistema SaaS de controle financeiro pessoal.
 ```bash
 cp .env.example .env
 pnpm install
-pnpm db:generate
 pnpm --filter @financeflow/database migrate:deploy
 pnpm db:seed
 pnpm dev
 ```
+
+> `pnpm install` e `pnpm dev` já rodam `prisma generate` automaticamente. Se a API acusar que `@financeflow/database` não existe, rode: `pnpm db:prepare`
 
 **PostgreSQL local:** crie o banco e ajuste `DATABASE_URL` no `.env`:
 
