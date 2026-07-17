@@ -5,6 +5,7 @@ document.getElementById('logoutBtn').addEventListener('click', logout);
 const categoryForm = document.getElementById('categoryForm');
 const categoryName = document.getElementById('categoryName');
 const categoryType = document.getElementById('categoryType');
+const categoryColor = document.getElementById('categoryColor');
 const filterType = document.getElementById('filterType');
 const categoryError = document.getElementById('categoryError');
 const categoriesTable = document.getElementById('categoriesTable');
@@ -24,17 +25,24 @@ function clearError() {
   categoryError.classList.add('hidden');
 }
 
+function renderColorSwatch(color) {
+  const value = color || '#6366F1';
+  const bg = hexToRgba(value, 0.18) || value;
+  return `<span class="color-swatch" style="background:${bg};border-color:${value}" title="${value}"></span>`;
+}
+
 function renderCategories(items) {
   if (!items.length) {
     categoriesTable.innerHTML = `
-      <tr><td colspan="3" class="empty-cell">Nenhuma categoria cadastrada.</td></tr>
+      <tr><td colspan="4" class="empty-cell">Nenhuma categoria cadastrada.</td></tr>
     `;
     return;
   }
 
   categoriesTable.innerHTML = items.map((item) => `
     <tr>
-      <td>${item.name}</td>
+      <td>${renderColorSwatch(item.color)}</td>
+      <td>${categoryTag(item.name, buildCategoryColorMap([item]))}</td>
       <td>${TYPE_LABELS[item.type] || item.type}</td>
       <td class="actions">
         <button class="btn-icon delete-category" data-id="${item.id}" title="Excluir">✕</button>
@@ -70,6 +78,7 @@ categoryForm.addEventListener('submit', async (e) => {
 
   const name = categoryName.value.trim();
   const type = categoryType.value;
+  const color = categoryColor.value;
 
   if (!name) {
     showError('Informe o nome da categoria.');
@@ -82,9 +91,10 @@ categoryForm.addEventListener('submit', async (e) => {
   try {
     await api('/categories', {
       method: 'POST',
-      body: JSON.stringify({ name, type }),
+      body: JSON.stringify({ name, type, color }),
     });
     categoryForm.reset();
+    categoryColor.value = '#6366f1';
     await loadCategories();
   } catch (err) {
     showError(err.message || 'Erro ao criar categoria.');

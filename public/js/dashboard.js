@@ -21,7 +21,7 @@ function initYearSelect() {
     opt.textContent = y;
     yearSelect.appendChild(opt);
   }
-  yearSelect.value = '2026';
+  yearSelect.value = String(currentYear);
 }
 
 function renderChart(months) {
@@ -37,11 +37,38 @@ function renderChart(months) {
   }).join('');
 }
 
+function renderCategoryBreakdown(reportCategories, colorMap) {
+  const el = document.getElementById('categoryBreakdown');
+  if (!reportCategories.length) {
+    el.innerHTML = '<p class="empty-cell">Sem gastos por categoria no ano.</p>';
+    return;
+  }
+
+  el.innerHTML = reportCategories.map((item) => `
+    <div class="category-breakdown-row">
+      <div class="category-breakdown-label">${categoryTag(item.category, colorMap)}</div>
+      <div class="category-breakdown-bar">
+        <div class="category-breakdown-fill" style="width:${Math.max(item.percent, item.total > 0 ? 2 : 0)}%;background:${colorMap.get(item.category) || '#6366F1'}"></div>
+      </div>
+      <div class="category-breakdown-values">
+        <strong>${formatMoney(item.total)}</strong>
+        <span>${formatPercent(item.percent)}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
 async function loadDashboard() {
   const year = parseInt(yearSelect.value, 10);
   document.getElementById('yearLabel').textContent = year;
 
-  const data = await api(`/dashboard/year?year=${year}`);
+  const [data, categoryList, report] = await Promise.all([
+    api(`/dashboard/year?year=${year}`),
+    api('/categories?type=EXPENSE'),
+    api(`/reports?year=${year}`),
+  ]);
+
+  const colorMap = buildCategoryColorMap(categoryList);
 
   document.getElementById('totalReceita').textContent = formatMoney(data.totals.receitaBruta);
   document.getElementById('totalDespesas').textContent = formatMoney(data.totals.totalDespesas);
@@ -60,6 +87,7 @@ async function loadDashboard() {
     </tr>
   `).join('');
 
+  renderCategoryBreakdown(report.categories, colorMap);
   renderChart(data.months);
 }
 
