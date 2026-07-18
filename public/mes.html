@@ -55,6 +55,9 @@
         </div>
       </div>
 
+      <nav id="viewTabs" class="view-tabs" aria-label="Visão do controle mensal"></nav>
+
+      <div id="overviewView">
       <section class="panel">
         <div class="panel-header">
           <h2>Recebíveis</h2>
@@ -115,6 +118,25 @@
           <th>Vencimento</th><th>Cartão</th><th>Valor total da fatura</th><th>Categoria</th><th>Status</th><th>Limite do cartão</th><th>Limite atual</th><th>Fatura fechada</th><th></th>
         </tr></thead><tbody id="expenses-card"></tbody></table></div>
       </section>
+      </div>
+
+      <div id="cardView" class="hidden">
+        <section class="panel">
+          <div class="panel-header">
+            <h2 id="cardViewTitle">Cartão</h2>
+            <button class="btn-primary btn-sm" id="addCardPurchaseBtn">+ Compra</button>
+          </div>
+          <div id="cardViewSummary" class="card-view-summary"></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Vencimento</th><th>Descrição</th><th>Valor</th><th>Parcelado</th><th>Status</th><th></th>
+              </tr></thead>
+              <tbody id="cardPurchasesTable"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
     </div>
   </div>
 
