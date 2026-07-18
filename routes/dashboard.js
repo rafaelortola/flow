@@ -1,8 +1,9 @@
 const express = require('express');
 const db = require('../db');
+const { buildCardInvoiceRows } = require('../lib/card-invoices');
 
 async function monthSummary(userId, month, year) {
-  const [incomes, expenses] = await Promise.all([
+  const [incomes, expenses, cardInvoices] = await Promise.all([
     db.query(
       `SELECT COALESCE(SUM(amount), 0) AS total FROM incomes WHERE "userId" = $1 AND month = $2 AND year = $3`,
       [userId, month, year],
@@ -10,9 +11,11 @@ async function monthSummary(userId, month, year) {
     db.query(
       `SELECT expense_group, COALESCE(SUM(amount), 0) AS total
        FROM expenses WHERE "userId" = $1 AND month = $2 AND year = $3
+         AND expense_group != 'card'
        GROUP BY expense_group`,
       [userId, month, year],
     ),
+    buildCardInvoiceRows(userId, month, year),
   ]);
 
   const receitaBruta = Number(incomes.rows[0]?.total || 0);
@@ -20,6 +23,7 @@ async function monthSummary(userId, month, year) {
   for (const row of expenses.rows) {
     byGroup[row.expense_group] = Number(row.total);
   }
+  byGroup.card = cardInvoices.reduce((sum, row) => sum + Number(row.invoice_total || 0), 0);
   const totalDespesas = Object.values(byGroup).reduce((a, b) => a + b, 0);
 
   return {
