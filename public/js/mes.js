@@ -194,6 +194,11 @@ function buildCardPurchaseSchedule(baseBody, month, year, dueDate, debtType, ins
 }
 
 const GROUPS_WITH_INSTALLMENT = new Set(['essential', 'nonessential', 'debt']);
+
+function usesDebtTypeModal(group) {
+  if (group === 'card') return cardModalMode === 'purchase';
+  return GROUPS_WITH_INSTALLMENT.has(group);
+}
 const CARD_CATEGORY = 'Cartão de Crédito';
 
 let cardInvoices = [];
@@ -362,11 +367,12 @@ function applyCardPurchaseFieldState() {
     fCard.required = true;
   }
 
-  updateCardDebtTypeFields();
+  updateDebtTypeFields();
 }
 
-function updateCardDebtTypeFields() {
-  if (cardModalMode !== 'purchase') return;
+function updateDebtTypeFields() {
+  const group = document.getElementById('modalGroup').value;
+  if (!usesDebtTypeModal(group)) return;
 
   const debtType = document.getElementById('fDebtType').value;
   const showInstallmentCount = isDebtType(debtType, 'Parcelado');
@@ -449,7 +455,7 @@ function renderExpenses(group, items, extra = {}) {
       <td>${e.name}</td>
       <td>${formatMoney(e.amount)}</td>
       <td>${categoryTag(e.category || '—', categoryColorMap)}</td>
-      ${showInstallment ? `<td>${renderInstallmentCell(e)}</td>` : ''}
+      ${showInstallment ? `<td>${renderDebtTypeCell(e)}</td>` : ''}
       <td>${statusBadge(e.payment_status)}</td>
       <td class="actions">
         <button class="btn-icon toggle-pay" data-id="${e.id}" data-status="${e.payment_status}" title="Alternar pago">✓</button>
@@ -650,7 +656,7 @@ function setCardModalFields(group, mode = 'default') {
   setDueDateFieldLabel(isPurchase ? 'Data da compra' : 'Vencimento');
   setAmountFieldLabel(isInvoice ? 'Valor total da fatura' : (isPurchase ? 'Valor da despesa' : 'Valor'));
   cardModalMode = mode;
-  if (isPurchase) updateCardDebtTypeFields();
+  if (isPurchase) updateDebtTypeFields();
 }
 
 function setExpenseFieldVisibility(group) {
@@ -666,10 +672,11 @@ function setExpenseFieldVisibility(group) {
   document.getElementById('fSpendingTypeLabel').classList.remove('hidden');
   document.getElementById('fDebtTypeLabel').classList.remove('hidden');
   document.getElementById('fInstallmentCountLabel').classList.add('hidden');
-  document.getElementById('fInstallmentLabel').classList.toggle('hidden', !GROUPS_WITH_INSTALLMENT.has(group));
+  document.getElementById('fInstallmentLabel').classList.add('hidden');
   setDueDateFieldLabel('Vencimento');
   setAmountFieldLabel('Valor');
   cardModalMode = 'default';
+  if (GROUPS_WITH_INSTALLMENT.has(group)) updateDebtTypeFields();
 }
 
 function setModalFieldsRequired(type) {
@@ -747,6 +754,8 @@ async function openExpenseModal(group, item = null) {
     }
   } else if (group === 'card' && !isCardInvoice) {
     applyCardPurchaseFieldState();
+  } else if (usesDebtTypeModal(group)) {
+    updateDebtTypeFields();
   }
 }
 
@@ -778,7 +787,7 @@ document.querySelectorAll('.add-expense-btn').forEach((btn) => {
 });
 
 document.getElementById('addCardPurchaseBtn').addEventListener('click', () => openCardPurchaseModal());
-document.getElementById('fDebtType').addEventListener('change', updateCardDebtTypeFields);
+document.getElementById('fDebtType').addEventListener('change', updateDebtTypeFields);
 
 modalForm.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -890,6 +899,39 @@ modalForm.addEventListener('submit', async (e) => {
             for (const entry of schedules) {
               await api('/expenses', { method: 'POST', body: JSON.stringify(entry) });
             }
+          }
+        }
+      } else if (GROUPS_WITH_INSTALLMENT.has(group)) {
+        if (id) {
+          if (isDebtType(debtType, 'Parcelado')) {
+            const total = parseInt(document.getElementById('fInstallmentCount').value, 10);
+            if (!Number.isFinite(total) || total < 2) {
+              showModalError('Informe a quantidade de parcelas (mínimo 2).');
+              return;
+            }
+            body.installment_total = total;
+            body.installment_info = installment.installment_info || '1 de';
+          } else {
+            body.installment_info = null;
+            body.installment_total = null;
+          }
+          await api(`/expenses/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+        } else {
+          try {
+            const schedules = buildCardPurchaseSchedule(
+              body,
+              month,
+              year,
+              dueDate,
+              debtType,
+              document.getElementById('fInstallmentCount').value,
+            );
+            for (const entry of schedules) {
+              await api('/expenses', { method: 'POST', body: JSON.stringify(entry) });
+            }
+          } catch (scheduleErr) {
+            showModalError(scheduleErr.message || 'Erro ao salvar.');
+            return;
           }
         }
       } else if (id) {

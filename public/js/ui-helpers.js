@@ -62,6 +62,21 @@ function renderInstallmentCell(expense) {
   return `<span class="${cls}">${text}</span>`;
 }
 
+function renderDebtTypeCell(expense) {
+  const debtType = (expense.debt_type || '').trim();
+  if (!debtType) return renderInstallmentCell(expense);
+
+  if (debtType.toLowerCase() === 'parcelado') {
+    const { text, isLast } = getInstallmentDisplay(expense);
+    if (text !== '—') {
+      const cls = isLast ? 'installment-tag installment-last' : 'installment-tag';
+      return `${debtType} <span class="${cls}">${text}</span>`;
+    }
+  }
+
+  return debtType;
+}
+
 function formatPercent(value) {
   return `${Number(value || 0).toFixed(1)}%`;
 }
