@@ -93,12 +93,21 @@ function parseInstallmentInput(value) {
 
 const GROUPS_WITH_INSTALLMENT = new Set(['essential', 'nonessential', 'debt']);
 
-function renderExpenses(group, items) {
+function renderExpenses(group, items, extra = {}) {
   const tbody = document.getElementById(`expenses-${group}`);
   const total = items.reduce((s, e) => s + Number(e.amount), 0);
   document.getElementById(`total-${group}`).textContent = formatMoney(total);
   const showInstallment = GROUPS_WITH_INSTALLMENT.has(group);
   const showCard = group === 'card';
+  const colCount = showCard ? 7 : (showInstallment ? 7 : 6);
+
+  if (!items.length) {
+    const message = group === 'card' && extra.noCards
+      ? 'Nenhum cartão cadastrado. Cadastre em Cartões no menu.'
+      : 'Nenhum lançamento neste mês.';
+    tbody.innerHTML = `<tr><td colspan="${colCount}" class="empty-cell">${message}</td></tr>`;
+    return;
+  }
 
   tbody.innerHTML = items.map((e) => `
     <tr>
@@ -166,6 +175,16 @@ async function loadAll() {
   const { month, year } = getPeriod();
   const qs = `?month=${month}&year=${year}`;
 
+  try {
+    cards = await api('/cards');
+  } catch (err) {
+    if (err.status === 401) {
+      logout();
+      return;
+    }
+    cards = cards || [];
+  }
+
   const [summary, incomes, essential, nonessential, debt, card, notes] = await Promise.all([
     api(`/dashboard/month${qs}`),
     api(`/incomes${qs}`),
@@ -185,7 +204,7 @@ async function loadAll() {
   renderExpenses('essential', essential);
   renderExpenses('nonessential', nonessential);
   renderExpenses('debt', debt);
-  renderExpenses('card', card);
+  renderExpenses('card', card, { noCards: cards.length === 0 });
   document.getElementById('notesArea').value = notes.content || '';
 }
 

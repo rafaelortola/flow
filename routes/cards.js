@@ -1,6 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const db = require('../db');
+const { tryEnsureCardExpensesForMonth } = require('../lib/sync-card-expenses');
 
 function asyncHandler(fn) {
   return (req, res, next) => {
@@ -88,6 +89,14 @@ function cardRoutes(authMiddleware) {
        RETURNING id, name, color, closing_day, due_day`,
       [id, req.user.sub, name, color, closingDay, dueDay],
     );
+
+    const now = new Date();
+    await tryEnsureCardExpensesForMonth(
+      req.user.sub,
+      now.getMonth() + 1,
+      now.getFullYear(),
+    );
+
     res.status(201).json(result.rows[0]);
   }));
 
