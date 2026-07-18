@@ -595,6 +595,10 @@ textarea {
   color: var(--muted);
 }
 
+.modal-content label.hidden {
+  display: none;
+}
+
 .modal-content input,
 .modal-content select {
   width: 100%;

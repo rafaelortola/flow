@@ -587,6 +587,13 @@ function setAmountFieldLabel(text) {
   label.append(`${text}`, input);
 }
 
+function setDueDateFieldLabel(text) {
+  const label = document.getElementById('fDueDateLabel');
+  const input = document.getElementById('fDueDate');
+  label.textContent = '';
+  label.append(`${text}`, input);
+}
+
 function setCardModalFields(group, mode = 'default') {
   const isCard = group === 'card';
   const isInvoice = isCard && mode === 'invoice';
@@ -610,6 +617,7 @@ function setCardModalFields(group, mode = 'default') {
   }
 
   document.getElementById('fName').required = !isCard || isPurchase;
+  setDueDateFieldLabel(isPurchase ? 'Data da compra' : 'Vencimento');
   setAmountFieldLabel(isInvoice ? 'Valor total da fatura' : (isPurchase ? 'Valor da despesa' : 'Valor'));
   cardModalMode = mode;
   if (isPurchase) updateCardDebtTypeFields();
@@ -629,6 +637,7 @@ function setExpenseFieldVisibility(group) {
   document.getElementById('fDebtTypeLabel').classList.remove('hidden');
   document.getElementById('fInstallmentCountLabel').classList.add('hidden');
   document.getElementById('fInstallmentLabel').classList.toggle('hidden', !GROUPS_WITH_INSTALLMENT.has(group));
+  setDueDateFieldLabel('Vencimento');
   setAmountFieldLabel('Valor');
   cardModalMode = 'default';
 }
@@ -662,6 +671,7 @@ function closeModal() {
   document.getElementById('fInstallmentCountLabel').classList.add('hidden');
   cardModalMode = 'default';
   presetCardId = null;
+  setDueDateFieldLabel('Vencimento');
   setAmountFieldLabel('Valor');
   clearModalError();
   modalSubmitBtn.disabled = false;
