@@ -91,6 +91,78 @@ function parseInstallmentInput(value) {
   return { installment_info: trimmed, installment_total: null };
 }
 
+function addMonths(month, year, offset) {
+  let m = month + offset;
+  let y = year;
+  while (m > 12) {
+    m -= 12;
+    y += 1;
+  }
+  while (m < 1) {
+    m += 12;
+    y -= 1;
+  }
+  return { month: m, year: y };
+}
+
+function shiftDueDate(dateStr, monthOffset) {
+  if (!dateStr) return null;
+  const d = new Date(`${dateStr.slice(0, 10)}T12:00:00`);
+  d.setMonth(d.getMonth() + monthOffset);
+  return d.toISOString().slice(0, 10);
+}
+
+function normalizeDebtType(value) {
+  return (value || '').trim().toLowerCase();
+}
+
+function isDebtType(value, type) {
+  return normalizeDebtType(value) === type.toLowerCase();
+}
+
+function buildCardPurchaseSchedule(baseBody, month, year, dueDate, debtType, installmentCount) {
+  if (isDebtType(debtType, 'Mensal')) {
+    return Array.from({ length: 12 }, (_, index) => {
+      const period = addMonths(month, year, index);
+      return {
+        ...baseBody,
+        month: period.month,
+        year: period.year,
+        due_date: shiftDueDate(dueDate, index),
+        installment_info: null,
+        installment_total: null,
+      };
+    });
+  }
+
+  if (isDebtType(debtType, 'Parcelado')) {
+    const total = parseInt(installmentCount, 10);
+    if (!Number.isFinite(total) || total < 2) {
+      throw new Error('Informe a quantidade de parcelas (mínimo 2).');
+    }
+    return Array.from({ length: total }, (_, index) => {
+      const period = addMonths(month, year, index);
+      return {
+        ...baseBody,
+        month: period.month,
+        year: period.year,
+        due_date: shiftDueDate(dueDate, index),
+        installment_info: `${index + 1} de`,
+        installment_total: total,
+      };
+    });
+  }
+
+  return [{
+    ...baseBody,
+    month,
+    year,
+    due_date: dueDate,
+    installment_info: null,
+    installment_total: null,
+  }];
+}
+
 const GROUPS_WITH_INSTALLMENT = new Set(['essential', 'nonessential', 'debt']);
 const CARD_CATEGORY = 'Cartão de Crédito';
 
@@ -240,15 +312,36 @@ async function loadCardView(cardId) {
 }
 
 function openCardPurchaseModal(item = null) {
-  presetCardId = activeView !== 'overview' ? activeView : null;
+  presetCardId = item?.card_id || (activeView !== 'overview' ? activeView : null);
   setExpenseFieldVisibility('card');
   openExpenseModal('card', item);
+  applyCardPurchaseFieldState();
+}
 
-  if (presetCardId) {
-    document.getElementById('fCard').value = presetCardId;
-    document.getElementById('cardField').classList.add('hidden');
-    document.getElementById('fCard').required = false;
+function applyCardPurchaseFieldState() {
+  const fCard = document.getElementById('fCard');
+  const lockedCard = Boolean(presetCardId);
+
+  if (lockedCard) {
+    fCard.value = presetCardId;
+    document.getElementById('cardField').classList.remove('hidden');
+    fCard.disabled = true;
+    fCard.required = false;
+  } else {
+    fCard.disabled = false;
+    fCard.required = true;
   }
+
+  updateCardDebtTypeFields();
+}
+
+function updateCardDebtTypeFields() {
+  if (cardModalMode !== 'purchase') return;
+
+  const debtType = document.getElementById('fDebtType').value;
+  const showInstallmentCount = isDebtType(debtType, 'Parcelado');
+  document.getElementById('fInstallmentCountLabel').classList.toggle('hidden', !showInstallmentCount);
+  document.getElementById('fInstallmentLabel').classList.add('hidden');
 }
 
 function renderCardInvoices(items, extra = {}) {
@@ -500,16 +593,26 @@ function setCardModalFields(group, mode = 'default') {
   const isPurchase = isCard && mode === 'purchase';
 
   document.getElementById('fNameLabel').classList.toggle('hidden', isInvoice);
-  document.getElementById('fCategoryLabel').classList.toggle('hidden', isCard);
-  document.getElementById('fSpendingTypeLabel').classList.toggle('hidden', isCard);
-  document.getElementById('fDebtTypeLabel').classList.toggle('hidden', isCard);
-  document.getElementById('fInstallmentLabel').classList.toggle('hidden', !isPurchase);
+  document.getElementById('fCategoryLabel').classList.toggle('hidden', isInvoice);
+  document.getElementById('fSpendingTypeLabel').classList.toggle('hidden', !isPurchase);
+  document.getElementById('fDebtTypeLabel').classList.toggle('hidden', !isPurchase);
+  document.getElementById('fInstallmentLabel').classList.toggle('hidden', isCard);
+  document.getElementById('fInstallmentCountLabel').classList.add('hidden');
   document.getElementById('cardField').classList.toggle('hidden', isInvoice);
-  document.getElementById('fCard').required = isPurchase;
+
+  const fCard = document.getElementById('fCard');
+  if (isPurchase && presetCardId) {
+    fCard.disabled = true;
+    fCard.required = false;
+  } else {
+    fCard.disabled = false;
+    fCard.required = isPurchase && !presetCardId;
+  }
 
   document.getElementById('fName').required = !isCard || isPurchase;
-  setAmountFieldLabel(isInvoice ? 'Valor total da fatura' : 'Valor');
+  setAmountFieldLabel(isInvoice ? 'Valor total da fatura' : (isPurchase ? 'Valor da despesa' : 'Valor'));
   cardModalMode = mode;
+  if (isPurchase) updateCardDebtTypeFields();
 }
 
 function setExpenseFieldVisibility(group) {
@@ -518,11 +621,13 @@ function setExpenseFieldVisibility(group) {
     return;
   }
   document.getElementById('cardField').classList.add('hidden');
+  document.getElementById('fCard').disabled = false;
   document.getElementById('fCard').required = false;
   document.getElementById('fNameLabel').classList.remove('hidden');
   document.getElementById('fCategoryLabel').classList.remove('hidden');
   document.getElementById('fSpendingTypeLabel').classList.remove('hidden');
   document.getElementById('fDebtTypeLabel').classList.remove('hidden');
+  document.getElementById('fInstallmentCountLabel').classList.add('hidden');
   document.getElementById('fInstallmentLabel').classList.toggle('hidden', !GROUPS_WITH_INSTALLMENT.has(group));
   setAmountFieldLabel('Valor');
   cardModalMode = 'default';
@@ -552,7 +657,9 @@ function closeModal() {
   modalForm.reset();
   document.getElementById('modalId').value = '';
   document.getElementById('cardField').classList.add('hidden');
+  document.getElementById('fCard').disabled = false;
   document.getElementById('fCard').required = false;
+  document.getElementById('fInstallmentCountLabel').classList.add('hidden');
   cardModalMode = 'default';
   presetCardId = null;
   setAmountFieldLabel('Valor');
@@ -573,14 +680,14 @@ async function openExpenseModal(group, item = null) {
     setExpenseFieldVisibility(group);
   }
 
-  fillSelect('fCategory', categoriesByType('EXPENSE'), 'Selecione', item?.category || CARD_CATEGORY);
+  fillSelect('fCategory', categoriesByType('EXPENSE'), 'Selecione', item?.category || '');
   fillCardSelect('fCard', cards, 'Selecione', item?.card_id || presetCardId || '');
   fillSelect('fSpendingType', options.spendingTypes);
   fillSelect('fDebtType', options.debtTypes);
   fillSelect('fStatus', options.paymentStatuses);
 
   if (group === 'card') {
-    document.getElementById('modalTitle').textContent = isCardInvoice ? 'Editar fatura do cartão' : 'Compra no cartão';
+    document.getElementById('modalTitle').textContent = isCardInvoice ? 'Editar fatura do cartão' : 'Despesa no cartão';
   }
 
   if (item) {
@@ -588,19 +695,18 @@ async function openExpenseModal(group, item = null) {
     document.getElementById('fDueDate').value = item.due_date ? item.due_date.slice(0, 10) : '';
     document.getElementById('fName').value = item.name || item.card_name || '';
     document.getElementById('fAmount').value = item.invoice_total ?? item.amount ?? '';
-    document.getElementById('fCategory').value = item.category || CARD_CATEGORY;
-    document.getElementById('fCard').value = item.card_id || '';
+    document.getElementById('fCategory').value = item.category || '';
+    document.getElementById('fCard').value = item.card_id || presetCardId || '';
     document.getElementById('fSpendingType').value = item.spending_type || '';
     document.getElementById('fDebtType').value = item.debt_type || '';
     document.getElementById('fInstallment').value = installmentInputValue(item);
+    document.getElementById('fInstallmentCount').value = item.installment_total || '';
     document.getElementById('fStatus').value = item.payment_status || 'Não pago';
-  } else if (group === 'card') {
-    document.getElementById('fCategory').value = CARD_CATEGORY;
-    if (presetCardId) {
-      document.getElementById('fCard').value = presetCardId;
-      document.getElementById('cardField').classList.add('hidden');
-      document.getElementById('fCard').required = false;
+    if (group === 'card' && !isCardInvoice) {
+      applyCardPurchaseFieldState();
     }
+  } else if (group === 'card' && !isCardInvoice) {
+    applyCardPurchaseFieldState();
   }
 }
 
@@ -632,6 +738,7 @@ document.querySelectorAll('.add-expense-btn').forEach((btn) => {
 });
 
 document.getElementById('addCardPurchaseBtn').addEventListener('click', () => openCardPurchaseModal());
+document.getElementById('fDebtType').addEventListener('change', updateCardDebtTypeFields);
 
 modalForm.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -669,15 +776,17 @@ modalForm.addEventListener('submit', async (e) => {
       const installment = parseInstallmentInput(document.getElementById('fInstallment').value);
       const cardId = document.getElementById('fCard').value;
       const selectedCard = cards.find((c) => c.id === cardId);
+      const debtType = document.getElementById('fDebtType').value || null;
+      const dueDate = document.getElementById('fDueDate').value || null;
       const body = {
         month, year,
         expense_group: group,
-        due_date: document.getElementById('fDueDate').value || null,
+        due_date: dueDate,
         name: document.getElementById('fName').value,
         amount: parseFloat(document.getElementById('fAmount').value),
         category: document.getElementById('fCategory').value || null,
         spending_type: document.getElementById('fSpendingType').value || null,
-        debt_type: document.getElementById('fDebtType').value || null,
+        debt_type: debtType,
         installment_info: installment.installment_info,
         installment_total: installment.installment_total,
         payment_status: document.getElementById('fStatus').value || 'Não pago',
@@ -693,6 +802,8 @@ modalForm.addEventListener('submit', async (e) => {
             showModalError('Cartão não identificado.');
             return;
           }
+          if (id) await api(`/expenses/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+          else await api('/expenses', { method: 'POST', body: JSON.stringify(body) });
         } else {
           const resolvedCardId = cardId || presetCardId;
           if (!resolvedCardId) {
@@ -700,16 +811,52 @@ modalForm.addEventListener('submit', async (e) => {
             return;
           }
           if (!body.name.trim()) {
-            showModalError('Informe a descrição da compra.');
+            showModalError('Informe a descrição da despesa.');
             return;
           }
-          body.category = CARD_CATEGORY;
+          if (!Number.isFinite(body.amount) || body.amount < 0.01) {
+            showModalError('Informe um valor válido (mínimo R$ 0,01).');
+            return;
+          }
           body.card_id = resolvedCardId;
-        }
-      }
 
-      if (id) await api(`/expenses/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
-      else await api('/expenses', { method: 'POST', body: JSON.stringify(body) });
+          if (id) {
+            const editingPurchase = cardViewPurchases.find((x) => x.id === id);
+            if (isDebtType(debtType, 'Parcelado')) {
+              const total = parseInt(document.getElementById('fInstallmentCount').value, 10);
+              if (!Number.isFinite(total) || total < 2) {
+                showModalError('Informe a quantidade de parcelas (mínimo 2).');
+                return;
+              }
+              body.installment_total = total;
+              body.installment_info = editingPurchase?.installment_info || installment.installment_info || '1 de';
+            } else if (!isDebtType(debtType, 'Mensal')) {
+              body.installment_info = null;
+              body.installment_total = null;
+            } else {
+              body.installment_info = null;
+              body.installment_total = null;
+            }
+            await api(`/expenses/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+          } else {
+            const schedules = buildCardPurchaseSchedule(
+              body,
+              month,
+              year,
+              dueDate,
+              debtType,
+              document.getElementById('fInstallmentCount').value,
+            );
+            for (const entry of schedules) {
+              await api('/expenses', { method: 'POST', body: JSON.stringify(entry) });
+            }
+          }
+        }
+      } else if (id) {
+        await api(`/expenses/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+      } else {
+        await api('/expenses', { method: 'POST', body: JSON.stringify(body) });
+      }
     }
 
     closeModal();

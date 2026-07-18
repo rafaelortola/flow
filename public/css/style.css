@@ -544,8 +544,9 @@ th {
   margin-bottom: 0.25rem;
 }
 
-.card-view-stat .value {
-  font-weight: 600;
+.disabled-field {
+  opacity: 0.75;
+  cursor: not-allowed;
 }
 
 textarea {
