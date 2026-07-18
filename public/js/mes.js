@@ -33,6 +33,36 @@ function getPeriod() {
   };
 }
 
+function ensureYearOption(year) {
+  if (Array.from(yearSelect.options).some((option) => parseInt(option.value, 10) === year)) {
+    return;
+  }
+
+  const option = document.createElement('option');
+  option.value = String(year);
+  option.textContent = String(year);
+
+  const years = Array.from(yearSelect.options).map((item) => parseInt(item.value, 10));
+  if (years.length && year < Math.min(...years)) {
+    yearSelect.prepend(option);
+  } else {
+    yearSelect.appendChild(option);
+  }
+}
+
+function setPeriod(month, year) {
+  ensureYearOption(year);
+  monthSelect.value = String(month);
+  yearSelect.value = String(year);
+}
+
+function shiftPeriod(monthDelta) {
+  const { month, year } = getPeriod();
+  const next = addMonths(month, year, monthDelta);
+  setPeriod(next.month, next.year);
+  loadAll();
+}
+
 function initPeriodSelectors() {
   MONTHS.forEach((name, i) => {
     const opt = document.createElement('option');
@@ -888,6 +918,8 @@ document.getElementById('saveNotesBtn').addEventListener('click', async () => {
 });
 
 document.getElementById('reloadBtn').addEventListener('click', loadAll);
+document.getElementById('prevMonthBtn').addEventListener('click', () => shiftPeriod(-1));
+document.getElementById('nextMonthBtn').addEventListener('click', () => shiftPeriod(1));
 monthSelect.addEventListener('change', loadAll);
 yearSelect.addEventListener('change', loadAll);
 
