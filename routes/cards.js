@@ -2,7 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const db = require('../db');
 const { tryEnsureCardExpensesForMonth } = require('../lib/sync-card-expenses');
-const { buildCardInvoiceRows } = require('../lib/card-invoices');
+const { buildCardInvoiceRows, resolvePrimaryExpense, getPurchaseExpenses } = require('../lib/card-invoices');
 
 function asyncHandler(fn) {
   return (req, res, next) => {
@@ -141,8 +141,8 @@ function cardRoutes(authMiddleware) {
       [req.user.sub, month, year, card.id],
     );
 
-    const primaryId = invoice?.id;
-    const purchases = expensesResult.rows.filter((expense) => expense.id !== primaryId);
+    const primary = resolvePrimaryExpense(expensesResult.rows, card);
+    const purchases = getPurchaseExpenses(expensesResult.rows, primary);
 
     res.json({ card, invoice, purchases });
   }));
