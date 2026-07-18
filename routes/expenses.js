@@ -1,6 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const db = require('../db');
+const { tryEnsureCardExpensesForMonth } = require('../lib/sync-card-expenses');
 
 const VALID_GROUPS = ['essential', 'nonessential', 'debt', 'card'];
 
@@ -22,6 +23,10 @@ function expenseRoutes(authMiddleware) {
       return res.status(400).json({ message: 'month e year são obrigatórios' });
     }
 
+    if (group === 'card') {
+      await tryEnsureCardExpensesForMonth(req.user.sub, month, year);
+    }
+
     let sql = `SELECT e.*, c.name AS card_name, c.color AS card_color
                FROM expenses e
                LEFT JOIN cards c ON c.id = e.card_id
@@ -31,7 +36,9 @@ function expenseRoutes(authMiddleware) {
       sql += ` AND e.expense_group = $4`;
       params.push(group);
     }
-    sql += ` ORDER BY e.due_date NULLS LAST, e.name`;
+    sql += group === 'card'
+      ? ` ORDER BY c.name NULLS LAST, e.due_date NULLS LAST, e.name`
+      : ` ORDER BY e.due_date NULLS LAST, e.name`;
 
     try {
       const result = await db.query(sql, params);
