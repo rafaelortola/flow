@@ -96,6 +96,160 @@ const CARD_CATEGORY = 'Cartão de Crédito';
 
 let cardInvoices = [];
 let cardModalMode = 'default';
+let activeView = 'overview';
+let cardViewPurchases = [];
+let presetCardId = null;
+
+function renderViewTabs() {
+  const container = document.getElementById('viewTabs');
+  if (!container) return;
+
+  let html = `<button type="button" class="view-tab ${activeView === 'overview' ? 'active' : ''}" data-view="overview">Visão Geral</button>`;
+
+  for (const card of cards) {
+    const isActive = activeView === card.id;
+    const color = card.color || '#A855F7';
+    html += `<button type="button" class="view-tab view-tab-card ${isActive ? 'active' : ''}" data-view="${card.id}" style="--tab-color:${color}">${card.name}</button>`;
+  }
+
+  container.innerHTML = html;
+  container.querySelectorAll('.view-tab').forEach((btn) => {
+    btn.addEventListener('click', () => switchView(btn.dataset.view));
+  });
+}
+
+function updateViewUrl() {
+  const url = new URL(window.location.href);
+  if (activeView === 'overview') {
+    url.searchParams.delete('view');
+    url.searchParams.delete('card');
+  } else {
+    url.searchParams.set('view', 'card');
+    url.searchParams.set('card', activeView);
+  }
+  history.replaceState(null, '', url);
+}
+
+function switchView(view) {
+  if (view !== 'overview' && !cards.some((card) => card.id === view)) {
+    view = 'overview';
+  }
+
+  activeView = view;
+  document.getElementById('overviewView').classList.toggle('hidden', view !== 'overview');
+  document.getElementById('cardView').classList.toggle('hidden', view === 'overview');
+  renderViewTabs();
+  updateViewUrl();
+
+  if (view !== 'overview') {
+    loadCardView(view);
+  }
+}
+
+function renderCardViewSummary(data) {
+  const { card, invoice } = data;
+  const summary = document.getElementById('cardViewSummary');
+  document.getElementById('cardViewTitle').innerHTML = cardTag(card.name, card.color);
+
+  summary.innerHTML = `
+    <div class="card-view-stat">
+      <span class="label">Fatura do mês</span>
+      <span class="value">${formatMoney(invoice?.invoice_total ?? 0)}</span>
+    </div>
+    <div class="card-view-stat">
+      <span class="label">Limite do cartão</span>
+      <span class="value">${formatMoney(invoice?.credit_limit ?? card.credit_limit)}</span>
+    </div>
+    <div class="card-view-stat">
+      <span class="label">Limite atual</span>
+      <span class="value">${formatMoney(invoice?.limit_available ?? 0)}</span>
+    </div>
+    <div class="card-view-stat">
+      <span class="label">Fatura fechada</span>
+      <span class="value">${renderInvoiceClosedBadge(invoice?.invoice_closed)}</span>
+    </div>
+    <div class="card-view-stat">
+      <span class="label">Status da fatura</span>
+      <span class="value">${statusBadge(invoice?.payment_status || 'Não pago')}</span>
+    </div>
+  `;
+}
+
+function renderCardPurchases(purchases) {
+  cardViewPurchases = purchases;
+  const tbody = document.getElementById('cardPurchasesTable');
+
+  if (!purchases.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">Nenhuma compra neste cartão no mês. Clique em + Compra.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = purchases.map((expense) => `
+    <tr>
+      <td>${formatDate(expense.due_date)}</td>
+      <td>${expense.name}</td>
+      <td>${formatMoney(expense.amount)}</td>
+      <td>${renderInstallmentCell(expense)}</td>
+      <td>${statusBadge(expense.payment_status)}</td>
+      <td class="actions">
+        <button class="btn-icon toggle-pay" data-id="${expense.id}" data-status="${expense.payment_status}" title="Alternar pago">✓</button>
+        <button class="btn-icon edit-purchase" data-id="${expense.id}" title="Editar">✎</button>
+        <button class="btn-icon delete-purchase" data-id="${expense.id}" title="Excluir">✕</button>
+      </td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('.toggle-pay').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const next = btn.dataset.status === 'Pago' ? 'Não pago' : 'Pago';
+      await api(`/expenses/${btn.dataset.id}/status`, { method: 'PATCH', body: JSON.stringify({ payment_status: next }) });
+      await loadAll();
+    });
+  });
+
+  tbody.querySelectorAll('.edit-purchase').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const item = cardViewPurchases.find((x) => x.id === btn.dataset.id);
+      if (item) openCardPurchaseModal(item);
+    });
+  });
+
+  tbody.querySelectorAll('.delete-purchase').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Excluir esta compra?')) return;
+      await api(`/expenses/${btn.dataset.id}`, { method: 'DELETE' });
+      await loadAll();
+    });
+  });
+}
+
+async function loadCardView(cardId) {
+  const { month, year } = getPeriod();
+  try {
+    const data = await api(`/cards/${cardId}/month?month=${month}&year=${year}`);
+    renderCardViewSummary(data);
+    renderCardPurchases(data.purchases);
+  } catch (err) {
+    if (err.status === 401) {
+      logout();
+      return;
+    }
+    document.getElementById('cardPurchasesTable').innerHTML =
+      `<tr><td colspan="6" class="empty-cell">${err.message || 'Erro ao carregar cartão.'}</td></tr>`;
+  }
+}
+
+function openCardPurchaseModal(item = null) {
+  presetCardId = activeView !== 'overview' ? activeView : null;
+  setExpenseFieldVisibility('card');
+  openExpenseModal('card', item);
+
+  if (presetCardId) {
+    document.getElementById('fCard').value = presetCardId;
+    document.getElementById('cardField').classList.add('hidden');
+    document.getElementById('fCard').required = false;
+  }
+}
 
 function renderCardInvoices(items, extra = {}) {
   cardInvoices = items;
@@ -262,6 +416,18 @@ async function loadAll() {
   renderExpenses('debt', debt);
   renderExpenses('card', card, { noCards: cards.length === 0 });
   document.getElementById('notesArea').value = notes.content || '';
+
+  if (activeView !== 'overview' && !cards.some((c) => c.id === activeView)) {
+    activeView = 'overview';
+    document.getElementById('overviewView').classList.remove('hidden');
+    document.getElementById('cardView').classList.add('hidden');
+    updateViewUrl();
+  }
+
+  renderViewTabs();
+  if (activeView !== 'overview') {
+    await loadCardView(activeView);
+  }
 }
 
 // Modal
@@ -388,6 +554,7 @@ function closeModal() {
   document.getElementById('cardField').classList.add('hidden');
   document.getElementById('fCard').required = false;
   cardModalMode = 'default';
+  presetCardId = null;
   setAmountFieldLabel('Valor');
   clearModalError();
   modalSubmitBtn.disabled = false;
@@ -407,7 +574,7 @@ async function openExpenseModal(group, item = null) {
   }
 
   fillSelect('fCategory', categoriesByType('EXPENSE'), 'Selecione', item?.category || CARD_CATEGORY);
-  fillCardSelect('fCard', cards, 'Selecione', item?.card_id || '');
+  fillCardSelect('fCard', cards, 'Selecione', item?.card_id || presetCardId || '');
   fillSelect('fSpendingType', options.spendingTypes);
   fillSelect('fDebtType', options.debtTypes);
   fillSelect('fStatus', options.paymentStatuses);
@@ -429,6 +596,11 @@ async function openExpenseModal(group, item = null) {
     document.getElementById('fStatus').value = item.payment_status || 'Não pago';
   } else if (group === 'card') {
     document.getElementById('fCategory').value = CARD_CATEGORY;
+    if (presetCardId) {
+      document.getElementById('fCard').value = presetCardId;
+      document.getElementById('cardField').classList.add('hidden');
+      document.getElementById('fCard').required = false;
+    }
   }
 }
 
@@ -453,10 +625,13 @@ document.getElementById('addIncomeBtn').addEventListener('click', () => openInco
 document.querySelectorAll('.add-expense-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
     const group = btn.dataset.group;
+    presetCardId = null;
     setExpenseFieldVisibility(group);
     openExpenseModal(group);
   });
 });
+
+document.getElementById('addCardPurchaseBtn').addEventListener('click', () => openCardPurchaseModal());
 
 modalForm.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -519,7 +694,8 @@ modalForm.addEventListener('submit', async (e) => {
             return;
           }
         } else {
-          if (!cardId) {
+          const resolvedCardId = cardId || presetCardId;
+          if (!resolvedCardId) {
             showModalError('Selecione o cartão.');
             return;
           }
@@ -528,7 +704,7 @@ modalForm.addEventListener('submit', async (e) => {
             return;
           }
           body.category = CARD_CATEGORY;
-          body.card_id = cardId;
+          body.card_id = resolvedCardId;
         }
       }
 
@@ -560,6 +736,7 @@ yearSelect.addEventListener('change', loadAll);
 
 async function init() {
   initPeriodSelectors();
+  activeView = params.get('card') || 'overview';
   try {
     const user = await api('/me');
     document.getElementById('userGreeting').textContent = user.name || user.email;
@@ -575,6 +752,7 @@ async function init() {
       cards = [];
     }
     options = await api('/categories/options');
+    switchView(activeView);
     await loadAll();
   } catch (err) {
     if (err.status === 401) logout();

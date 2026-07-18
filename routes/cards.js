@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const db = require('../db');
 const { tryEnsureCardExpensesForMonth } = require('../lib/sync-card-expenses');
+const { buildCardInvoiceRows } = require('../lib/card-invoices');
 
 function asyncHandler(fn) {
   return (req, res, next) => {
@@ -109,6 +110,41 @@ function cardRoutes(authMiddleware) {
     );
 
     res.status(201).json(result.rows[0]);
+  }));
+
+  router.get('/:id/month', asyncHandler(async (req, res) => {
+    const month = parseInt(req.query.month, 10);
+    const year = parseInt(req.query.year, 10);
+    if (!month || !year) {
+      return res.status(400).json({ message: 'month e year são obrigatórios' });
+    }
+
+    const cardResult = await db.query(
+      `SELECT id, name, color, closing_day, due_day, credit_limit
+       FROM cards WHERE id = $1 AND "userId" = $2`,
+      [req.params.id, req.user.sub],
+    );
+    if (!cardResult.rowCount) {
+      return res.status(404).json({ message: 'Cartão não encontrado' });
+    }
+
+    const card = cardResult.rows[0];
+    const invoiceRows = await buildCardInvoiceRows(req.user.sub, month, year);
+    const invoice = invoiceRows.find((row) => row.card_id === card.id) || null;
+
+    const expensesResult = await db.query(
+      `SELECT *
+       FROM expenses
+       WHERE "userId" = $1 AND month = $2 AND year = $3
+         AND expense_group = 'card' AND card_id = $4
+       ORDER BY due_date NULLS LAST, name`,
+      [req.user.sub, month, year, card.id],
+    );
+
+    const primaryId = invoice?.id;
+    const purchases = expensesResult.rows.filter((expense) => expense.id !== primaryId);
+
+    res.json({ card, invoice, purchases });
   }));
 
   router.patch('/:id', asyncHandler(async (req, res) => {
