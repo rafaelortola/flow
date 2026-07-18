@@ -25,9 +25,9 @@ const INCOME_CATEGORIES = [
 ];
 
 const DEMO_CARDS = [
-  { name: 'Nubank', color: '#820AD1', closing_day: 3, due_day: 10 },
-  { name: 'Itaú', color: '#EC7000', closing_day: 15, due_day: 22 },
-  { name: 'Inter', color: '#FF7A00', closing_day: 1, due_day: 8 },
+  { name: 'Nubank', color: '#820AD1', closing_day: 3, due_day: 10, credit_limit: 8000 },
+  { name: 'Itaú', color: '#EC7000', closing_day: 15, due_day: 22, credit_limit: 12000 },
+  { name: 'Inter', color: '#FF7A00', closing_day: 1, due_day: 8, credit_limit: 5000 },
 ];
 
 async function tableExists(name) {
@@ -205,12 +205,18 @@ async function ensureSchema() {
         color TEXT,
         closing_day INTEGER,
         due_day INTEGER,
+        credit_limit DECIMAL(12,2) DEFAULT 0,
         "createdAt" TIMESTAMP DEFAULT NOW(),
         "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW(),
         UNIQUE("userId", name)
       )
     `);
     console.log('OK: tabela cards criada');
+  }
+
+  if (!(await columnExists('cards', 'credit_limit'))) {
+    await pool.query(`ALTER TABLE cards ADD COLUMN credit_limit DECIMAL(12,2) DEFAULT 0`);
+    console.log('OK: coluna cards.credit_limit adicionada');
   }
 
   if (!(await columnExists('expenses', 'card_id'))) {
@@ -292,9 +298,9 @@ async function seedCards(userId) {
     if (exists.rowCount === 0) {
       const id = `card-${card.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
       await pool.query(
-        `INSERT INTO cards (id, "userId", name, color, closing_day, due_day, "createdAt", "updatedAt")
-         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())`,
-        [id, userId, card.name, card.color, card.closing_day, card.due_day],
+        `INSERT INTO cards (id, "userId", name, color, closing_day, due_day, credit_limit, "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
+        [id, userId, card.name, card.color, card.closing_day, card.due_day, card.credit_limit || 0],
       );
     }
   }

@@ -488,6 +488,8 @@ th {
 .badge-overdue { background: rgba(234, 179, 8, 0.2); color: #eab308; }
 .badge-neutral { background: rgba(148, 163, 184, 0.2); color: var(--muted); }
 
+.muted-inline { color: var(--muted); font-size: 0.85rem; }
+
 textarea {
   width: 100%;
   background: var(--bg);

@@ -73,3 +73,11 @@ function cardTag(name, color) {
   const border = hexToRgba(tagColor, 0.45) || tagColor;
   return `<span class="category-tag" style="background:${bg};border-color:${border};color:${tagColor}">${name}</span>`;
 }
+
+function renderInvoiceClosedBadge(closed) {
+  if (closed == null) return '—';
+  if (closed) {
+    return '<span class="badge badge-neutral">Fechada</span>';
+  }
+  return '<span class="badge badge-paid">Aberta</span>';
+}

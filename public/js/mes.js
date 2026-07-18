@@ -92,20 +92,77 @@ function parseInstallmentInput(value) {
 }
 
 const GROUPS_WITH_INSTALLMENT = new Set(['essential', 'nonessential', 'debt']);
+const CARD_CATEGORY = 'Cartão de Crédito';
+
+let cardInvoices = [];
+let cardModalMode = 'default';
+
+function renderCardInvoices(items, extra = {}) {
+  cardInvoices = items;
+  const tbody = document.getElementById('expenses-card');
+  const total = items.reduce((s, row) => s + Number(row.invoice_total ?? row.amount ?? 0), 0);
+  document.getElementById('total-card').textContent = formatMoney(total);
+  const colCount = 9;
+
+  if (!items.length) {
+    const message = extra.noCards
+      ? 'Nenhum cartão cadastrado. Cadastre em Cartões no menu.'
+      : 'Nenhum lançamento neste mês.';
+    tbody.innerHTML = `<tr><td colspan="${colCount}" class="empty-cell">${message}</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = items.map((row) => `
+    <tr>
+      <td>${formatDate(row.due_date)}</td>
+      <td>${cardTag(row.card_name, row.card_color)}</td>
+      <td>${formatMoney(row.invoice_total ?? row.amount)}</td>
+      <td>${categoryTag(CARD_CATEGORY, categoryColorMap)}</td>
+      <td>${statusBadge(row.payment_status)}</td>
+      <td>${formatMoney(row.credit_limit)}</td>
+      <td>${formatMoney(row.limit_available)}</td>
+      <td>${renderInvoiceClosedBadge(row.invoice_closed)}</td>
+      <td class="actions">
+        ${row.id ? `
+          <button class="btn-icon toggle-pay" data-id="${row.id}" data-status="${row.payment_status}" title="Alternar pago">✓</button>
+          <button class="btn-icon edit-expense" data-id="${row.id}" title="Editar fatura">✎</button>
+        ` : `
+          <span class="muted-inline">—</span>
+        `}
+      </td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('.toggle-pay').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const next = btn.dataset.status === 'Pago' ? 'Não pago' : 'Pago';
+      await api(`/expenses/${btn.dataset.id}/status`, { method: 'PATCH', body: JSON.stringify({ payment_status: next }) });
+      loadAll();
+    });
+  });
+
+  tbody.querySelectorAll('.edit-expense').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const row = cardInvoices.find((x) => x.id === btn.dataset.id);
+      if (row) openExpenseModal('card', row);
+    });
+  });
+}
 
 function renderExpenses(group, items, extra = {}) {
+  if (group === 'card') {
+    renderCardInvoices(items, extra);
+    return;
+  }
+
   const tbody = document.getElementById(`expenses-${group}`);
   const total = items.reduce((s, e) => s + Number(e.amount), 0);
   document.getElementById(`total-${group}`).textContent = formatMoney(total);
   const showInstallment = GROUPS_WITH_INSTALLMENT.has(group);
-  const showCard = group === 'card';
-  const colCount = showCard ? 7 : (showInstallment ? 7 : 6);
+  const colCount = showInstallment ? 7 : 6;
 
   if (!items.length) {
-    const message = group === 'card' && extra.noCards
-      ? 'Nenhum cartão cadastrado. Cadastre em Cartões no menu.'
-      : 'Nenhum lançamento neste mês.';
-    tbody.innerHTML = `<tr><td colspan="${colCount}" class="empty-cell">${message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${colCount}" class="empty-cell">Nenhum lançamento neste mês.</td></tr>`;
     return;
   }
 
@@ -115,7 +172,6 @@ function renderExpenses(group, items, extra = {}) {
       <td>${e.name}</td>
       <td>${formatMoney(e.amount)}</td>
       <td>${categoryTag(e.category || '—', categoryColorMap)}</td>
-      ${showCard ? `<td>${cardTag(e.card_name || '—', e.card_color)}</td>` : ''}
       ${showInstallment ? `<td>${renderInstallmentCell(e)}</td>` : ''}
       <td>${statusBadge(e.payment_status)}</td>
       <td class="actions">
@@ -265,10 +321,45 @@ async function refreshCards() {
   cards = await api('/cards');
 }
 
-function setExpenseFieldVisibility(group) {
+function setAmountFieldLabel(text) {
+  const label = document.getElementById('fAmountLabel');
+  const input = document.getElementById('fAmount');
+  label.textContent = '';
+  label.append(`${text}`, input);
+}
+
+function setCardModalFields(group, mode = 'default') {
   const isCard = group === 'card';
-  document.getElementById('cardField').classList.toggle('hidden', !isCard);
-  document.getElementById('fCard').required = isCard;
+  const isInvoice = isCard && mode === 'invoice';
+  const isPurchase = isCard && mode === 'purchase';
+
+  document.getElementById('fNameLabel').classList.toggle('hidden', isInvoice);
+  document.getElementById('fCategoryLabel').classList.toggle('hidden', isCard);
+  document.getElementById('fSpendingTypeLabel').classList.toggle('hidden', isCard);
+  document.getElementById('fDebtTypeLabel').classList.toggle('hidden', isCard);
+  document.getElementById('fInstallmentLabel').classList.toggle('hidden', !isPurchase);
+  document.getElementById('cardField').classList.toggle('hidden', isInvoice);
+  document.getElementById('fCard').required = isPurchase;
+
+  document.getElementById('fName').required = !isCard || isPurchase;
+  setAmountFieldLabel(isInvoice ? 'Valor total da fatura' : 'Valor');
+  cardModalMode = mode;
+}
+
+function setExpenseFieldVisibility(group) {
+  if (group === 'card') {
+    setCardModalFields(group, 'purchase');
+    return;
+  }
+  document.getElementById('cardField').classList.add('hidden');
+  document.getElementById('fCard').required = false;
+  document.getElementById('fNameLabel').classList.remove('hidden');
+  document.getElementById('fCategoryLabel').classList.remove('hidden');
+  document.getElementById('fSpendingTypeLabel').classList.remove('hidden');
+  document.getElementById('fDebtTypeLabel').classList.remove('hidden');
+  document.getElementById('fInstallmentLabel').classList.toggle('hidden', !GROUPS_WITH_INSTALLMENT.has(group));
+  setAmountFieldLabel('Valor');
+  cardModalMode = 'default';
 }
 
 function setModalFieldsRequired(type) {
@@ -296,6 +387,8 @@ function closeModal() {
   document.getElementById('modalId').value = '';
   document.getElementById('cardField').classList.add('hidden');
   document.getElementById('fCard').required = false;
+  cardModalMode = 'default';
+  setAmountFieldLabel('Valor');
   clearModalError();
   modalSubmitBtn.disabled = false;
   modalSubmitBtn.textContent = 'Salvar';
@@ -305,24 +398,37 @@ async function openExpenseModal(group, item = null) {
   await Promise.all([refreshCategories(), refreshCards()]);
   openModal('expense');
   document.getElementById('modalGroup').value = group;
-  setExpenseFieldVisibility(group);
-  fillSelect('fCategory', categoriesByType('EXPENSE'), 'Selecione', item?.category || '');
+
+  const isCardInvoice = group === 'card' && item?.card_id && item?.id;
+  if (group === 'card') {
+    setCardModalFields(group, isCardInvoice ? 'invoice' : 'purchase');
+  } else {
+    setExpenseFieldVisibility(group);
+  }
+
+  fillSelect('fCategory', categoriesByType('EXPENSE'), 'Selecione', item?.category || CARD_CATEGORY);
   fillCardSelect('fCard', cards, 'Selecione', item?.card_id || '');
   fillSelect('fSpendingType', options.spendingTypes);
   fillSelect('fDebtType', options.debtTypes);
   fillSelect('fStatus', options.paymentStatuses);
 
+  if (group === 'card') {
+    document.getElementById('modalTitle').textContent = isCardInvoice ? 'Editar fatura do cartão' : 'Compra no cartão';
+  }
+
   if (item) {
-    document.getElementById('modalId').value = item.id;
+    document.getElementById('modalId').value = item.id || '';
     document.getElementById('fDueDate').value = item.due_date ? item.due_date.slice(0, 10) : '';
-    document.getElementById('fName').value = item.name;
-    document.getElementById('fAmount').value = item.amount;
-    document.getElementById('fCategory').value = item.category || '';
+    document.getElementById('fName').value = item.name || item.card_name || '';
+    document.getElementById('fAmount').value = item.invoice_total ?? item.amount ?? '';
+    document.getElementById('fCategory').value = item.category || CARD_CATEGORY;
     document.getElementById('fCard').value = item.card_id || '';
     document.getElementById('fSpendingType').value = item.spending_type || '';
     document.getElementById('fDebtType').value = item.debt_type || '';
     document.getElementById('fInstallment').value = installmentInputValue(item);
     document.getElementById('fStatus').value = item.payment_status || 'Não pago';
+  } else if (group === 'card') {
+    document.getElementById('fCategory').value = CARD_CATEGORY;
   }
 }
 
@@ -345,7 +451,11 @@ async function openIncomeModal(item = null) {
 document.getElementById('modalCancel').addEventListener('click', closeModal);
 document.getElementById('addIncomeBtn').addEventListener('click', () => openIncomeModal());
 document.querySelectorAll('.add-expense-btn').forEach((btn) => {
-  btn.addEventListener('click', () => openExpenseModal(btn.dataset.group));
+  btn.addEventListener('click', () => {
+    const group = btn.dataset.group;
+    setExpenseFieldVisibility(group);
+    openExpenseModal(group);
+  });
 });
 
 modalForm.addEventListener('submit', async (e) => {
@@ -382,6 +492,8 @@ modalForm.addEventListener('submit', async (e) => {
     } else {
       const group = document.getElementById('modalGroup').value;
       const installment = parseInstallmentInput(document.getElementById('fInstallment').value);
+      const cardId = document.getElementById('fCard').value;
+      const selectedCard = cards.find((c) => c.id === cardId);
       const body = {
         month, year,
         expense_group: group,
@@ -395,14 +507,31 @@ modalForm.addEventListener('submit', async (e) => {
         installment_total: installment.installment_total,
         payment_status: document.getElementById('fStatus').value || 'Não pago',
       };
+
       if (group === 'card') {
-        const cardId = document.getElementById('fCard').value;
-        if (!cardId) {
-          showModalError('Selecione o cartão.');
-          return;
+        if (cardModalMode === 'invoice') {
+          const invoiceRow = cardInvoices.find((row) => row.id === id);
+          body.card_id = invoiceRow?.card_id || cardId;
+          body.name = invoiceRow?.card_name || selectedCard?.name || body.name;
+          body.category = CARD_CATEGORY;
+          if (!body.card_id) {
+            showModalError('Cartão não identificado.');
+            return;
+          }
+        } else {
+          if (!cardId) {
+            showModalError('Selecione o cartão.');
+            return;
+          }
+          if (!body.name.trim()) {
+            showModalError('Informe a descrição da compra.');
+            return;
+          }
+          body.category = CARD_CATEGORY;
+          body.card_id = cardId;
         }
-        body.card_id = cardId;
       }
+
       if (id) await api(`/expenses/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
       else await api('/expenses', { method: 'POST', body: JSON.stringify(body) });
     }

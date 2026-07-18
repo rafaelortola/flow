@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const db = require('../db');
 const { tryEnsureCardExpensesForMonth } = require('../lib/sync-card-expenses');
+const { buildCardInvoiceRows } = require('../lib/card-invoices');
 
 const VALID_GROUPS = ['essential', 'nonessential', 'debt', 'card'];
 
@@ -24,7 +25,12 @@ function expenseRoutes(authMiddleware) {
     }
 
     if (group === 'card') {
-      await tryEnsureCardExpensesForMonth(req.user.sub, month, year);
+      try {
+        const rows = await buildCardInvoiceRows(req.user.sub, month, year);
+        return res.json(rows);
+      } catch (err) {
+        if (!isMissingCardsSchema(err)) throw err;
+      }
     }
 
     let sql = `SELECT e.*, c.name AS card_name, c.color AS card_color
