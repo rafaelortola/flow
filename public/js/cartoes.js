@@ -8,6 +8,7 @@ const cardName = document.getElementById('cardName');
 const cardColor = document.getElementById('cardColor');
 const cardClosingDay = document.getElementById('cardClosingDay');
 const cardDueDay = document.getElementById('cardDueDay');
+const cardCreditLimit = document.getElementById('cardCreditLimit');
 const cardSubmitBtn = document.getElementById('cardSubmitBtn');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
 const cardError = document.getElementById('cardError');
@@ -30,6 +31,10 @@ function formatDay(day) {
   return day != null ? `Dia ${day}` : '—';
 }
 
+function formatMoney(v) {
+  return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
 function resetForm() {
   editingCardId = null;
   cardForm.reset();
@@ -45,6 +50,7 @@ function startEdit(item) {
   cardColor.value = item.color || '#a855f7';
   cardClosingDay.value = item.closing_day ?? '';
   cardDueDay.value = item.due_day ?? '';
+  cardCreditLimit.value = item.credit_limit ?? '';
   cardFormTitle.textContent = 'Editar cartão';
   cardSubmitBtn.textContent = 'Salvar';
   cancelEditBtn.classList.remove('hidden');
@@ -62,7 +68,7 @@ function renderColorSwatch(color) {
 function renderCards(items) {
   if (!items.length) {
     cardsTable.innerHTML = `
-      <tr><td colspan="5" class="empty-cell">Nenhum cartão cadastrado.</td></tr>
+      <tr><td colspan="6" class="empty-cell">Nenhum cartão cadastrado.</td></tr>
     `;
     return;
   }
@@ -73,6 +79,7 @@ function renderCards(items) {
       <td>${cardTag(item.name, item.color)}</td>
       <td>${formatDay(item.closing_day)}</td>
       <td>${formatDay(item.due_day)}</td>
+      <td>${formatMoney(item.credit_limit)}</td>
       <td class="actions">
         <button class="btn-icon edit-card" data-id="${item.id}" title="Editar">✎</button>
         <button class="btn-icon delete-card" data-id="${item.id}" title="Excluir">✕</button>
@@ -118,11 +125,13 @@ async function loadCards() {
 function buildPayload() {
   const closing = cardClosingDay.value.trim();
   const due = cardDueDay.value.trim();
+  const limit = cardCreditLimit.value.trim();
   return {
     name: cardName.value.trim(),
     color: cardColor.value,
     closing_day: closing === '' ? null : parseInt(closing, 10),
     due_day: due === '' ? null : parseInt(due, 10),
+    credit_limit: limit === '' ? 0 : parseFloat(limit),
   };
 }
 

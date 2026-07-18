@@ -112,7 +112,7 @@
           <button class="btn-primary btn-sm add-expense-btn" data-group="card">+ Despesa</button>
         </div>
         <div class="table-wrap"><table><thead><tr>
-          <th>Venc.</th><th>Nome</th><th>Valor</th><th>Categoria</th><th>Cartão</th><th>Status</th><th></th>
+          <th>Vencimento</th><th>Cartão</th><th>Valor total da fatura</th><th>Categoria</th><th>Status</th><th>Limite do cartão</th><th>Limite atual</th><th>Fatura fechada</th><th></th>
         </tr></thead><tbody id="expenses-card"></tbody></table></div>
       </section>
     </div>
@@ -128,13 +128,13 @@
 
         <div id="expenseFields">
           <label>Vencimento<input type="date" id="fDueDate" /></label>
-          <label>Nome<input type="text" id="fName" required /></label>
-          <label>Valor<input type="number" id="fAmount" step="0.01" required /></label>
-          <label>Categoria<select id="fCategory"></select></label>
+          <label id="fNameLabel">Nome<input type="text" id="fName" required /></label>
+          <label id="fAmountLabel">Valor<input type="number" id="fAmount" step="0.01" required /></label>
+          <label id="fCategoryLabel">Categoria<select id="fCategory"></select></label>
           <label id="cardField" class="hidden">Cartão<select id="fCard" required></select></label>
-          <label>Tipo de gasto<select id="fSpendingType"></select></label>
-          <label>Tipo da dívida<select id="fDebtType"></select></label>
-          <label>Parcelado<input type="text" id="fInstallment" placeholder="ex: 2 de 10" /></label>
+          <label id="fSpendingTypeLabel">Tipo de gasto<select id="fSpendingType"></select></label>
+          <label id="fDebtTypeLabel">Tipo da dívida<select id="fDebtType"></select></label>
+          <label id="fInstallmentLabel">Parcelado<input type="text" id="fInstallment" placeholder="ex: 2 de 10" /></label>
           <label>Status<select id="fStatus"></select></label>
         </div>
 

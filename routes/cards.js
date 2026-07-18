@@ -32,6 +32,13 @@ function normalizeDay(value) {
   return day;
 }
 
+function normalizeLimit(value) {
+  if (value == null || value === '') return 0;
+  const limit = parseFloat(value);
+  if (!Number.isFinite(limit) || limit < 0) return null;
+  return limit;
+}
+
 function cardRoutes(authMiddleware) {
   const router = express.Router();
   router.use(authMiddleware);
@@ -39,7 +46,7 @@ function cardRoutes(authMiddleware) {
   router.get('/', asyncHandler(async (req, res) => {
     try {
       const result = await db.query(
-        `SELECT id, name, color, closing_day, due_day
+        `SELECT id, name, color, closing_day, due_day, credit_limit
          FROM cards WHERE "userId" = $1
          ORDER BY name`,
         [req.user.sub],
@@ -60,9 +67,13 @@ function cardRoutes(authMiddleware) {
     const color = normalizeColor(req.body?.color) || DEFAULT_CARD_COLOR;
     const closingDay = normalizeDay(req.body?.closing_day);
     const dueDay = normalizeDay(req.body?.due_day);
+    const creditLimit = normalizeLimit(req.body?.credit_limit);
 
     if (!name) {
       return res.status(400).json({ message: 'Informe o nome do cartão' });
+    }
+    if (req.body?.credit_limit != null && req.body.credit_limit !== '' && creditLimit == null) {
+      return res.status(400).json({ message: 'Limite inválido' });
     }
     if (req.body?.color && !normalizeColor(req.body.color)) {
       return res.status(400).json({ message: 'Cor inválida. Use o formato #RRGGBB' });
@@ -84,10 +95,10 @@ function cardRoutes(authMiddleware) {
 
     const id = crypto.randomUUID();
     const result = await db.query(
-      `INSERT INTO cards (id, "userId", name, color, closing_day, due_day, "createdAt", "updatedAt")
-       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-       RETURNING id, name, color, closing_day, due_day`,
-      [id, req.user.sub, name, color, closingDay, dueDay],
+      `INSERT INTO cards (id, "userId", name, color, closing_day, due_day, credit_limit, "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+       RETURNING id, name, color, closing_day, due_day, credit_limit`,
+      [id, req.user.sub, name, color, closingDay, dueDay, creditLimit ?? 0],
     );
 
     const now = new Date();
@@ -105,9 +116,13 @@ function cardRoutes(authMiddleware) {
     const colorInput = req.body?.color;
     const closingDay = normalizeDay(req.body?.closing_day);
     const dueDay = normalizeDay(req.body?.due_day);
+    const creditLimitInput = req.body?.credit_limit;
 
     if (!name) {
       return res.status(400).json({ message: 'Informe o nome do cartão' });
+    }
+    if (creditLimitInput != null && creditLimitInput !== '' && normalizeLimit(creditLimitInput) == null) {
+      return res.status(400).json({ message: 'Limite inválido' });
     }
     if (colorInput != null && colorInput !== '' && !normalizeColor(colorInput)) {
       return res.status(400).json({ message: 'Cor inválida. Use o formato #RRGGBB' });
@@ -144,6 +159,9 @@ function cardRoutes(authMiddleware) {
     const dueDayValue = req.body?.due_day != null && req.body?.due_day !== ''
       ? dueDay
       : null;
+    const creditLimitValue = creditLimitInput != null && creditLimitInput !== ''
+      ? normalizeLimit(creditLimitInput)
+      : null;
 
     const result = await db.query(
       `UPDATE cards SET
@@ -151,10 +169,11 @@ function cardRoutes(authMiddleware) {
          color = COALESCE($2, color),
          closing_day = COALESCE($3, closing_day),
          due_day = COALESCE($4, due_day),
+         credit_limit = COALESCE($5, credit_limit),
          "updatedAt" = NOW()
-       WHERE id = $5 AND "userId" = $6
-       RETURNING id, name, color, closing_day, due_day`,
-      [name, color, closingDayValue, dueDayValue, req.params.id, req.user.sub],
+       WHERE id = $6 AND "userId" = $7
+       RETURNING id, name, color, closing_day, due_day, credit_limit`,
+      [name, color, closingDayValue, dueDayValue, creditLimitValue, req.params.id, req.user.sub],
     );
 
     res.json(result.rows[0]);
