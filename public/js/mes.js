@@ -408,7 +408,6 @@ function renderCardInvoices(items, extra = {}) {
       <td class="actions">
         ${row.id ? `
           <button class="btn-icon toggle-pay" data-id="${row.id}" data-status="${row.payment_status}" title="Alternar pago">✓</button>
-          <button class="btn-icon edit-expense" data-id="${row.id}" title="Editar fatura">✎</button>
         ` : `
           <span class="muted-inline">—</span>
         `}
@@ -421,13 +420,6 @@ function renderCardInvoices(items, extra = {}) {
       const next = btn.dataset.status === 'Pago' ? 'Não pago' : 'Pago';
       await api(`/expenses/${btn.dataset.id}/status`, { method: 'PATCH', body: JSON.stringify({ payment_status: next }) });
       loadAll();
-    });
-  });
-
-  tbody.querySelectorAll('.edit-expense').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const row = cardInvoices.find((x) => x.id === btn.dataset.id);
-      if (row) openExpenseModal('card', row);
     });
   });
 }
