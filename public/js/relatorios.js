@@ -8,7 +8,9 @@ const MONTHS = [
 ];
 
 const yearSelect = document.getElementById('yearSelect');
+const reloadBtn = document.getElementById('reloadBtn');
 const reportError = document.getElementById('reportError');
+const params = new URLSearchParams(window.location.search);
 
 function showError(message) {
   reportError.textContent = message;
@@ -28,15 +30,23 @@ function formatPercent(v) {
   return `${Number(v || 0).toFixed(1)}%`;
 }
 
-function initYearSelect() {
+function fillYearSelect(years) {
   const currentYear = new Date().getFullYear();
-  for (let y = currentYear - 1; y <= currentYear + 1; y++) {
-    const opt = document.createElement('option');
-    opt.value = y;
-    opt.textContent = y;
-    yearSelect.appendChild(opt);
-  }
-  yearSelect.value = String(currentYear);
+  const uniqueYears = [...new Set([...years, currentYear])].sort((a, b) => b - a);
+  yearSelect.innerHTML = uniqueYears.map((year) => (
+    `<option value="${year}">${year}</option>`
+  )).join('');
+
+  const requestedYear = parseInt(params.get('year') || String(currentYear), 10);
+  yearSelect.value = uniqueYears.includes(requestedYear)
+    ? String(requestedYear)
+    : String(uniqueYears[0] || currentYear);
+}
+
+function updateYearUrl() {
+  const url = new URL(window.location.href);
+  url.searchParams.set('year', yearSelect.value);
+  history.replaceState(null, '', url);
 }
 
 function renderMonthlyChart(months) {
@@ -86,10 +96,18 @@ function renderTableBody(id, rows, emptyMessage = 'Sem dados.') {
 async function loadReports() {
   clearError();
   const year = parseInt(yearSelect.value, 10);
+  if (!Number.isFinite(year)) {
+    showError('Selecione um ano válido.');
+    return;
+  }
+
   document.getElementById('yearLabel').textContent = year;
+  reloadBtn.disabled = true;
+  reloadBtn.textContent = 'Carregando...';
 
   try {
     const data = await api(`/reports?year=${year}`);
+    updateYearUrl();
 
     document.getElementById('totalReceitas').textContent = formatMoney(data.totals.receitas);
     document.getElementById('totalDespesas').textContent = formatMoney(data.totals.despesas);
@@ -141,14 +159,15 @@ async function loadReports() {
       return;
     }
     showError(err.message || 'Erro ao carregar relatórios. Reinicie o servidor (npm start) e tente novamente.');
+  } finally {
+    reloadBtn.disabled = false;
+    reloadBtn.textContent = 'Atualizar';
   }
 }
 
-yearSelect.addEventListener('change', loadReports);
-document.getElementById('reloadBtn').addEventListener('click', loadReports);
+reloadBtn.addEventListener('click', loadReports);
 
 async function init() {
-  initYearSelect();
   try {
     const user = await api('/me');
     document.getElementById('userGreeting').textContent = user.name || user.email;
@@ -157,6 +176,14 @@ async function init() {
     else showError(err.message || 'Erro ao validar sessão.');
     return;
   }
+
+  try {
+    const { years } = await api('/reports/years');
+    fillYearSelect(years);
+  } catch {
+    fillYearSelect([new Date().getFullYear()]);
+  }
+
   await loadReports();
 }
 
