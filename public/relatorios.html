@@ -26,11 +26,12 @@
     <div class="content">
       <header class="content-header">
         <div>
-          <h1>Relatórios <span id="yearLabel">2026</span></h1>
+          <h1>Relatórios <span id="periodLabel">2026</span></h1>
           <p class="subtitle" id="userGreeting">...</p>
         </div>
         <div class="period-select">
-          <select id="yearSelect"></select>
+          <select id="monthSelect" aria-label="Mês"></select>
+          <select id="yearSelect" aria-label="Ano"></select>
           <button id="reloadBtn" class="btn-primary">Atualizar</button>
         </div>
       </header>
@@ -39,15 +40,15 @@
 
       <div class="stats stats-3">
         <div class="stat green">
-          <span class="label">Receitas no ano</span>
+          <span class="label" id="receitasLabel">Receitas no mês</span>
           <span class="value" id="totalReceitas">R$ 0,00</span>
         </div>
         <div class="stat red">
-          <span class="label">Despesas no ano</span>
+          <span class="label" id="despesasLabel">Despesas no mês</span>
           <span class="value" id="totalDespesas">R$ 0,00</span>
         </div>
         <div class="stat blue">
-          <span class="label">Saldo no ano</span>
+          <span class="label" id="saldoLabel">Saldo no mês</span>
           <span class="value" id="totalSobra">R$ 0,00</span>
         </div>
       </div>
@@ -59,12 +60,12 @@
 
       <div class="report-grid">
         <section class="panel">
-          <div class="panel-header"><h2>Top categorias de gastos</h2></div>
+          <div class="panel-header"><h2 id="topCategoriesTitle">Top categorias de gastos</h2></div>
           <div id="topCategoriesChart" class="ranked-bars"></div>
         </section>
 
         <section class="panel">
-          <div class="panel-header"><h2>Gastos por tipo</h2></div>
+          <div class="panel-header"><h2 id="groupsTitle">Gastos por tipo</h2></div>
           <div id="groupsChart" class="ranked-bars"></div>
         </section>
       </div>

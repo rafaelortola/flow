@@ -7,6 +7,7 @@ const MONTHS = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 
+const monthSelect = document.getElementById('monthSelect');
 const yearSelect = document.getElementById('yearSelect');
 const reloadBtn = document.getElementById('reloadBtn');
 const reportError = document.getElementById('reportError');
@@ -30,6 +31,18 @@ function formatPercent(v) {
   return `${Number(v || 0).toFixed(1)}%`;
 }
 
+function initMonthSelect() {
+  monthSelect.innerHTML = MONTHS.map((name, index) => (
+    `<option value="${index + 1}">${name}</option>`
+  )).join('');
+
+  const currentMonth = new Date().getMonth() + 1;
+  const requestedMonth = parseInt(params.get('month') || String(currentMonth), 10);
+  monthSelect.value = requestedMonth >= 1 && requestedMonth <= 12
+    ? String(requestedMonth)
+    : String(currentMonth);
+}
+
 function fillYearSelect(years) {
   const currentYear = new Date().getFullYear();
   const uniqueYears = [...new Set([...years, currentYear])].sort((a, b) => b - a);
@@ -43,18 +56,38 @@ function fillYearSelect(years) {
     : String(uniqueYears[0] || currentYear);
 }
 
-function updateYearUrl() {
+function getSelectedPeriod() {
+  return {
+    month: parseInt(monthSelect.value, 10),
+    year: parseInt(yearSelect.value, 10),
+  };
+}
+
+function updatePeriodUrl() {
+  const { month, year } = getSelectedPeriod();
   const url = new URL(window.location.href);
-  url.searchParams.set('year', yearSelect.value);
+  url.searchParams.set('year', String(year));
+  url.searchParams.set('month', String(month));
   history.replaceState(null, '', url);
 }
 
-function renderMonthlyChart(months) {
+function updatePeriodLabels(month, year) {
+  const monthName = MONTHS[month - 1];
+  document.getElementById('periodLabel').textContent = `${monthName}/${year}`;
+  document.getElementById('receitasLabel').textContent = 'Receitas no mês';
+  document.getElementById('despesasLabel').textContent = 'Despesas no mês';
+  document.getElementById('saldoLabel').textContent = 'Saldo no mês';
+  document.getElementById('topCategoriesTitle').textContent = `Top categorias de gastos — ${monthName}`;
+  document.getElementById('groupsTitle').textContent = `Gastos por tipo — ${monthName}`;
+}
+
+function renderMonthlyChart(months, selectedMonth) {
   const max = Math.max(...months.map((m) => m.despesas), 1);
   document.getElementById('monthlyExpenseChart').innerHTML = months.map((m, i) => {
     const h = Math.round((m.despesas / max) * 100);
+    const isSelected = m.month === selectedMonth;
     return `
-      <div class="chart-bar-wrap" title="${MONTHS[i]}: ${formatMoney(m.despesas)}">
+      <div class="chart-bar-wrap ${isSelected ? 'chart-bar-selected' : ''}" title="${MONTHS[i]}: ${formatMoney(m.despesas)}">
         <div class="chart-bar bar-negative" style="height:${Math.max(h, m.despesas > 0 ? 4 : 0)}%"></div>
         <span>${MONTHS[i].slice(0, 3)}</span>
       </div>`;
@@ -95,19 +128,19 @@ function renderTableBody(id, rows, emptyMessage = 'Sem dados.') {
 
 async function loadReports() {
   clearError();
-  const year = parseInt(yearSelect.value, 10);
-  if (!Number.isFinite(year)) {
-    showError('Selecione um ano válido.');
+  const { month, year } = getSelectedPeriod();
+  if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) {
+    showError('Selecione um mês e ano válidos.');
     return;
   }
 
-  document.getElementById('yearLabel').textContent = year;
+  updatePeriodLabels(month, year);
   reloadBtn.disabled = true;
   reloadBtn.textContent = 'Carregando...';
 
   try {
-    const data = await api(`/reports?year=${year}`);
-    updateYearUrl();
+    const data = await api(`/reports?year=${year}&month=${month}`);
+    updatePeriodUrl();
 
     document.getElementById('totalReceitas').textContent = formatMoney(data.totals.receitas);
     document.getElementById('totalDespesas').textContent = formatMoney(data.totals.despesas);
@@ -115,7 +148,7 @@ async function loadReports() {
     sobraEl.textContent = formatMoney(data.totals.sobra);
     sobraEl.className = `value ${data.totals.sobra >= 0 ? 'text-green' : 'text-red'}`;
 
-    renderMonthlyChart(data.months);
+    renderMonthlyChart(data.months, month);
     renderRankedBars('topCategoriesChart', data.topCategories, 'category');
     renderRankedBars('groupsChart', data.groups, 'label');
 
@@ -126,10 +159,10 @@ async function loadReports() {
         <td>${formatPercent(item.percent)}</td>
         <td>${item.count}</td>
       </tr>
-    `).join(''));
+    `).join(''), 'Sem gastos neste mês.');
 
     renderTableBody('monthsTable', data.months.map((m, i) => `
-      <tr>
+      <tr class="${m.month === month ? 'row-selected' : ''}">
         <td>${MONTHS[i]}</td>
         <td>${formatMoney(m.receitas)}</td>
         <td>${formatMoney(m.despesas)}</td>
@@ -144,7 +177,7 @@ async function loadReports() {
         <td>${formatMoney(item.total)}</td>
         <td>${item.count}</td>
       </tr>
-    `).join(''), 'Sem receitas categorizadas.');
+    `).join(''), 'Sem receitas neste mês.');
 
     renderTableBody('incomeSourcesTable', data.incomeSources.map((item) => `
       <tr>
@@ -152,7 +185,7 @@ async function loadReports() {
         <td>${formatMoney(item.total)}</td>
         <td>${item.count}</td>
       </tr>
-    `).join(''), 'Sem receitas no período.');
+    `).join(''), 'Sem receitas neste mês.');
   } catch (err) {
     if (err.status === 401) {
       logout();
@@ -168,6 +201,8 @@ async function loadReports() {
 reloadBtn.addEventListener('click', loadReports);
 
 async function init() {
+  initMonthSelect();
+
   try {
     const user = await api('/me');
     document.getElementById('userGreeting').textContent = user.name || user.email;

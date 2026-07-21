@@ -674,6 +674,23 @@ textarea {
   color: var(--muted);
 }
 
+.chart-bar-selected span {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.chart-bar-selected .chart-bar {
+  box-shadow: 0 0 0 2px var(--primary);
+}
+
+.row-selected {
+  background: rgba(168, 85, 247, 0.08);
+}
+
+.row-selected td:first-child {
+  font-weight: 600;
+}
+
 .text-green { color: var(--green); }
 .text-red { color: var(--red); }
 
