@@ -201,6 +201,17 @@ function usesDebtTypeModal(group) {
 }
 const CARD_CATEGORY = 'Cartão de Crédito';
 
+function isCardInvoiceItem(item) {
+  if (!item?.card_id || !item?.id) return false;
+
+  const card = cards.find((c) => c.id === item.card_id);
+  const cardName = card?.name || item.card_name;
+  if (!cardName || item.name !== cardName) return false;
+
+  const installmentInfo = (item.installment_info || '').trim();
+  return !installmentInfo && item.installment_total == null;
+}
+
 let cardInvoices = [];
 let cardModalMode = 'default';
 let activeView = 'overview';
@@ -346,11 +357,13 @@ async function loadCardView(cardId) {
   }
 }
 
-function openCardPurchaseModal(item = null) {
+async function openCardPurchaseModal(item = null) {
   presetCardId = item?.card_id || (activeView !== 'overview' ? activeView : null);
   setExpenseFieldVisibility('card');
-  openExpenseModal('card', item);
-  applyCardPurchaseFieldState();
+  await openExpenseModal('card', item);
+  if (!isCardInvoiceItem(item)) {
+    applyCardPurchaseFieldState();
+  }
 }
 
 function applyCardPurchaseFieldState() {
@@ -712,7 +725,7 @@ async function openExpenseModal(group, item = null) {
   openModal('expense');
   document.getElementById('modalGroup').value = group;
 
-  const isCardInvoice = group === 'card' && item?.card_id && item?.id;
+  const isCardInvoice = group === 'card' && isCardInvoiceItem(item);
   if (group === 'card') {
     setCardModalFields(group, isCardInvoice ? 'invoice' : 'purchase');
   } else {
@@ -721,12 +734,14 @@ async function openExpenseModal(group, item = null) {
 
   fillSelect('fCategory', categoriesByType('EXPENSE'), 'Selecione', item?.category || '');
   fillCardSelect('fCard', cards, 'Selecione', item?.card_id || presetCardId || '');
-  fillSelect('fSpendingType', options.spendingTypes);
-  fillSelect('fDebtType', options.debtTypes);
-  fillSelect('fStatus', options.paymentStatuses);
+  fillSelect('fSpendingType', options.spendingTypes, 'Selecione', item?.spending_type || '');
+  fillSelect('fDebtType', options.debtTypes, 'Selecione', item?.debt_type || '');
+  fillSelect('fStatus', options.paymentStatuses, 'Selecione', item?.payment_status || '');
 
   if (group === 'card') {
-    document.getElementById('modalTitle').textContent = isCardInvoice ? 'Editar fatura do cartão' : 'Despesa no cartão';
+    document.getElementById('modalTitle').textContent = isCardInvoice
+      ? 'Editar fatura do cartão'
+      : (item ? 'Editar despesa no cartão' : 'Despesa no cartão');
   }
 
   if (item) {
