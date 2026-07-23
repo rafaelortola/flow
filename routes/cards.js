@@ -142,9 +142,15 @@ function cardRoutes(authMiddleware) {
     );
 
     const primary = resolvePrimaryExpense(expensesResult.rows, card);
-    const purchases = getPurchaseExpenses(expensesResult.rows, primary);
+    const purchases = getPurchaseExpenses(expensesResult.rows, card);
+    const purchasesTotal = purchases.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
 
-    res.json({ card, invoice, purchases });
+    if (invoice) {
+      invoice.invoice_total = purchasesTotal;
+      invoice.amount = purchasesTotal;
+    }
+
+    res.json({ card, invoice, purchases, purchasesTotal });
   }));
 
   router.patch('/:id', asyncHandler(async (req, res) => {

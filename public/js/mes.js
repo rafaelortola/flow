@@ -265,14 +265,15 @@ function switchView(view) {
 }
 
 function renderCardViewSummary(data) {
-  const { card, invoice } = data;
+  const { card, invoice, purchasesTotal } = data;
   const summary = document.getElementById('cardViewSummary');
   document.getElementById('cardViewTitle').innerHTML = cardTag(card.name, card.color);
+  const faturaTotal = purchasesTotal ?? invoice?.invoice_total ?? 0;
 
   summary.innerHTML = `
     <div class="card-view-stat">
       <span class="label">Fatura do mês</span>
-      <span class="value">${formatMoney(invoice?.invoice_total ?? 0)}</span>
+      <span class="value">${formatMoney(faturaTotal)}</span>
     </div>
     <div class="card-view-stat">
       <span class="label">Limite do cartão</span>
@@ -302,6 +303,8 @@ function renderCardPurchases(purchases) {
     return;
   }
 
+  const total = purchases.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+
   tbody.innerHTML = purchases.map((expense) => `
     <tr>
       <td>${formatDate(expense.due_date)}</td>
@@ -315,7 +318,13 @@ function renderCardPurchases(purchases) {
         <button class="btn-icon delete-purchase" data-id="${expense.id}" title="Excluir">✕</button>
       </td>
     </tr>
-  `).join('');
+  `).join('') + `
+    <tr class="table-total-row">
+      <td colspan="2"><strong>Total das compras</strong></td>
+      <td><strong>${formatMoney(total)}</strong></td>
+      <td colspan="3"></td>
+    </tr>
+  `;
 
   tbody.querySelectorAll('.toggle-pay').forEach((btn) => {
     btn.addEventListener('click', async () => {

@@ -425,6 +425,11 @@ button[type='submit']:disabled {
   padding: 1.5rem !important;
 }
 
+.table-total-row td {
+  border-top: 1px solid var(--border);
+  background: rgba(168, 85, 247, 0.06);
+}
+
 .table-wrap {
   overflow-x: auto;
 }
