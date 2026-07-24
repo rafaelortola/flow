@@ -1,10 +1,75 @@
 const express = require('express');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
+const { seedDefaultCategories } = require('../lib/seed-user-defaults');
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LENGTH = 6;
 
 function authRoutes(jwtSecret, authMiddleware) {
   const router = express.Router();
+
+  router.post('/register', async (req, res) => {
+    const { name, email, password } = req.body || {};
+    const trimmedName = typeof name === 'string' ? name.trim() : '';
+    const trimmedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+    if (!trimmedName || !trimmedEmail || !password) {
+      return res.status(400).json({ message: 'Nome, email e senha são obrigatórios' });
+    }
+    if (!EMAIL_RE.test(trimmedEmail)) {
+      return res.status(400).json({ message: 'Informe um email válido' });
+    }
+    if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
+      return res.status(400).json({
+        message: `A senha deve ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres`,
+      });
+    }
+
+    try {
+      const existing = await db.query(
+        `SELECT id FROM users WHERE email = $1 LIMIT 1`,
+        [trimmedEmail],
+      );
+      if (existing.rowCount > 0) {
+        return res.status(409).json({ message: 'Este email já está cadastrado' });
+      }
+
+      const id = crypto.randomUUID();
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      await db.query(
+        `INSERT INTO users (id, email, "passwordHash", name)
+         VALUES ($1, $2, $3, $4)`,
+        [id, trimmedEmail, passwordHash, trimmedName],
+      );
+
+      try {
+        await seedDefaultCategories(id);
+      } catch (seedErr) {
+        console.error('Aviso: falha ao criar categorias padrão:', seedErr.message);
+      }
+
+      const token = jwt.sign(
+        { sub: id, email: trimmedEmail, name: trimmedName },
+        jwtSecret,
+        { expiresIn: '7d' },
+      );
+
+      res.status(201).json({
+        token,
+        user: { id, email: trimmedEmail, name: trimmedName },
+      });
+    } catch (err) {
+      if (err.code === '23505') {
+        return res.status(409).json({ message: 'Este email já está cadastrado' });
+      }
+      console.error('Erro no cadastro:', err.message);
+      res.status(500).json({ message: 'Erro interno ao cadastrar' });
+    }
+  });
 
   router.post('/login', async (req, res) => {
     const { email, password } = req.body || {};
