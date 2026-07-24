@@ -168,6 +168,20 @@ button[type='submit']:disabled {
   margin-top: 1.5rem;
 }
 
+.hint + .hint {
+  margin-top: 0.75rem;
+}
+
+.hint a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.hint a:hover {
+  text-decoration: underline;
+}
+
 /* Dashboard */
 .app {
   min-height: 100vh;

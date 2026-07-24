@@ -7,6 +7,7 @@ Controle financeiro pessoal baseado na planilha **Planejamento Financeiro 2026**
 ## Funcionalidades
 
 - Login com JWT
+- Cadastro de novo usuário
 - **Dashboard anual** — resumo dos 12 meses + gráfico de sobra
 - **Controle mensal** — clone funcional da aba mensal da planilha:
   - Recebíveis (Biz, EDS, DB4SERV, etc.)
@@ -68,6 +69,7 @@ Ou use outra porta no `.env`: `PORT=3002`
 | Página | URL |
 |--------|-----|
 | Login | `/` |
+| Cadastro | `/cadastro.html` |
 | Dashboard anual | `/dashboard.html` |
 | Controle mensal | `/mes.html` |
 
@@ -75,6 +77,7 @@ Ou use outra porta no `.env`: `PORT=3002`
 
 | Rota | Descrição |
 |------|-----------|
+| `POST /api/register` | Cadastro (nome, email, senha) |
 | `POST /api/login` | Login |
 | `GET /api/dashboard/year?year=2026` | Resumo anual |
 | `GET /api/dashboard/month?month=6&year=2026` | Resumo mensal |

@@ -38,7 +38,7 @@ form.addEventListener('submit', async (e) => {
 });
 
 // Preenche demo ao clicar no hint
-document.querySelector('.hint')?.addEventListener('click', () => {
+document.querySelector('.hint-demo')?.addEventListener('click', () => {
   document.getElementById('email').value = 'demo@financeflow.com';
   document.getElementById('password').value = 'demo123456';
 });
