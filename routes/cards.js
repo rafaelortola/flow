@@ -2,7 +2,11 @@ const express = require('express');
 const crypto = require('crypto');
 const db = require('../db');
 const { tryEnsureCardExpensesForMonth } = require('../lib/sync-card-expenses');
-const { buildCardInvoiceRows, resolvePrimaryExpense, getPurchaseExpenses } = require('../lib/card-invoices');
+const {
+  buildCardInvoiceRows,
+  getPurchaseExpenses,
+  computeInvoiceTotal,
+} = require('../lib/card-invoices');
 
 function asyncHandler(fn) {
   return (req, res, next) => {
@@ -141,16 +145,15 @@ function cardRoutes(authMiddleware) {
       [req.user.sub, month, year, card.id],
     );
 
-    const primary = resolvePrimaryExpense(expensesResult.rows, card);
     const purchases = getPurchaseExpenses(expensesResult.rows, card);
-    const purchasesTotal = purchases.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+    const invoiceTotal = computeInvoiceTotal(expensesResult.rows, card);
 
     if (invoice) {
-      invoice.invoice_total = purchasesTotal;
-      invoice.amount = purchasesTotal;
+      invoice.invoice_total = invoiceTotal;
+      invoice.amount = invoiceTotal;
     }
 
-    res.json({ card, invoice, purchases, purchasesTotal });
+    res.json({ card, invoice, purchases, purchasesTotal: invoiceTotal });
   }));
 
   router.patch('/:id', asyncHandler(async (req, res) => {

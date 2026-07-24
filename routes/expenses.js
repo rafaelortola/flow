@@ -110,16 +110,18 @@ function expenseRoutes(authMiddleware) {
   router.patch('/:id', async (req, res) => {
     const b = req.body || {};
     const current = await db.query(
-      `SELECT expense_group, card_id FROM expenses WHERE id = $1 AND "userId" = $2`,
+      `SELECT expense_group, card_id, installment_info, installment_total
+       FROM expenses WHERE id = $1 AND "userId" = $2`,
       [req.params.id, req.user.sub],
     );
     if (!current.rowCount) return res.status(404).json({ message: 'Não encontrado' });
 
-    const expenseGroup = b.expense_group ?? current.rows[0].expense_group;
+    const existing = current.rows[0];
+    const expenseGroup = b.expense_group ?? existing.expense_group;
     let cardId;
 
     if (expenseGroup === 'card') {
-      cardId = b.card_id !== undefined ? (b.card_id || null) : current.rows[0].card_id;
+      cardId = b.card_id !== undefined ? (b.card_id || null) : existing.card_id;
       if (!cardId) {
         return res.status(400).json({ message: 'Selecione o cartão para despesas de cartão' });
       }
@@ -134,6 +136,15 @@ function expenseRoutes(authMiddleware) {
       cardId = null;
     }
 
+    // Explicit null must clear installment fields (Mensal / À vista).
+    // COALESCE would keep the previous value when the client sends null.
+    const installmentInfo = Object.prototype.hasOwnProperty.call(b, 'installment_info')
+      ? b.installment_info
+      : existing.installment_info;
+    const installmentTotal = Object.prototype.hasOwnProperty.call(b, 'installment_total')
+      ? b.installment_total
+      : existing.installment_total;
+
     const result = await db.query(
       `UPDATE expenses SET
          due_date = COALESCE($1, due_date),
@@ -143,8 +154,8 @@ function expenseRoutes(authMiddleware) {
          expense_group = COALESCE($5, expense_group),
          spending_type = COALESCE($6, spending_type),
          debt_type = COALESCE($7, debt_type),
-         installment_info = COALESCE($8, installment_info),
-         installment_total = COALESCE($9, installment_total),
+         installment_info = $8,
+         installment_total = $9,
          payment_status = COALESCE($10, payment_status),
          reviewed = COALESCE($11, reviewed),
          pay_period = COALESCE($12, pay_period),
@@ -156,7 +167,7 @@ function expenseRoutes(authMiddleware) {
       [
         b.due_date ?? null, b.name ?? null, b.amount ?? null, b.category ?? null,
         b.expense_group ?? null, b.spending_type ?? null, b.debt_type ?? null,
-        b.installment_info ?? null, b.installment_total ?? null,
+        installmentInfo ?? null, installmentTotal ?? null,
         b.payment_status ?? null, b.reviewed ?? null, b.pay_period ?? null,
         b.week1_amount ?? null, b.week2_amount ?? null,
         cardId,
