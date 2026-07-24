@@ -1,0 +1,13 @@
+---
+description: Stack e convenções do FinanceFlow (HTML + Node + PostgreSQL)
+alwaysApply: true
+---
+
+# FinanceFlow
+
+- Stack: HTML/CSS/JS vanilla em `public/`, Express em `routes/`, lógica em `lib/`, PostgreSQL via `db.js`.
+- UI em português (pt-BR). Valores monetários com `formatMoney` / locale pt-BR.
+- Escopo mínimo: não refatorar código não relacionado à tarefa.
+- Cartões: usar `lib/card-invoices.js` para totais de fatura; não somar placeholders + compras em dobro.
+- Modais: labels com `.hidden` dentro de `.modal-content` precisam da regra CSS `.modal-content label.hidden { display: none; }`.
+- Branches de feature: prefixo `cursor/`, sufixo `-591b`.
