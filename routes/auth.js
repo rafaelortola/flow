@@ -40,9 +40,10 @@ function authRoutes(jwtSecret, authMiddleware) {
       const id = crypto.randomUUID();
       const passwordHash = await bcrypt.hash(password, 10);
 
+      // updatedAt/createdAt explícitos: schema legado Prisma exige NOT NULL sem DEFAULT
       await db.query(
-        `INSERT INTO users (id, email, "passwordHash", name)
-         VALUES ($1, $2, $3, $4)`,
+        `INSERT INTO users (id, email, "passwordHash", name, "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, $4, NOW(), NOW())`,
         [id, trimmedEmail, passwordHash, trimmedName],
       );
 
@@ -67,7 +68,9 @@ function authRoutes(jwtSecret, authMiddleware) {
         return res.status(409).json({ message: 'Este email já está cadastrado' });
       }
       console.error('Erro no cadastro:', err.message);
-      res.status(500).json({ message: 'Erro interno ao cadastrar' });
+      res.status(500).json({
+        message: 'Erro interno ao cadastrar. Verifique o banco e rode: npm run setup',
+      });
     }
   });
 

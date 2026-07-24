@@ -75,6 +75,14 @@ async function ensureSchema() {
       )
     `);
     console.log('OK: tabela users criada');
+  } else {
+    // Schema Prisma legado: updatedAt NOT NULL sem DEFAULT quebra INSERT de cadastro
+    await pool.query(
+      `ALTER TABLE users ALTER COLUMN "updatedAt" SET DEFAULT NOW()`,
+    ).catch(() => {});
+    await pool.query(
+      `ALTER TABLE users ALTER COLUMN "createdAt" SET DEFAULT NOW()`,
+    ).catch(() => {});
   }
 
   await dropLegacyFinanceTables();
@@ -232,7 +240,8 @@ async function seedDemoUser() {
   if (existing.rowCount === 0) {
     const id = 'demo-user-' + Date.now();
     await pool.query(
-      `INSERT INTO users (id, email, "passwordHash", name) VALUES ($1, $2, $3, $4)`,
+      `INSERT INTO users (id, email, "passwordHash", name, "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, NOW(), NOW())`,
       [id, DEMO_EMAIL, hash, DEMO_NAME],
     );
     console.log('OK: usuário demo criado');
