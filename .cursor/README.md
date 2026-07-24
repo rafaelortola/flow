@@ -36,6 +36,7 @@ Skills ensinam o Agent a executar tarefas específicas. Podem ser invocadas com 
 Exemplos incluídos:
 - `skills/controle-mensal/SKILL.md` — Controle Mensal
 - `skills/revisao-valores/SKILL.md` — auditoria de valores (`npm run validate`)
+- `skills/fazer-merge/SKILL.md` — cria o PR e faz merge em `main` (`/fazer-merge`)
 
 ## Regras (`.cursor/rules/`)
 
@@ -54,6 +55,7 @@ Exemplo incluído: `rules/financeflow-stack.mdc`
 | Criar subagente | `/create-subagent` |
 | Criar regra | `/create-rule` |
 | Migrar regras antigas | `/migrate-to-skills` |
+| PR + merge em `main` | `/fazer-merge` |
 
 ## Escopo
 
