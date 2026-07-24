@@ -75,6 +75,18 @@ async function ensureSchema() {
       )
     `);
     console.log('OK: tabela users criada');
+  } else {
+    // Schema Prisma legado: updatedAt NOT NULL sem DEFAULT quebra INSERT de cadastro
+    await pool.query(
+      `ALTER TABLE users ALTER COLUMN "updatedAt" SET DEFAULT NOW()`,
+    ).catch(() => {});
+    await pool.query(
+      `ALTER TABLE users ALTER COLUMN "createdAt" SET DEFAULT NOW()`,
+    ).catch(() => {});
+    // Garante theme com default (TEXT ou enum Theme)
+    await pool.query(
+      `ALTER TABLE users ALTER COLUMN theme SET DEFAULT 'SYSTEM'`,
+    ).catch(() => {});
   }
 
   await dropLegacyFinanceTables();
@@ -232,7 +244,8 @@ async function seedDemoUser() {
   if (existing.rowCount === 0) {
     const id = 'demo-user-' + Date.now();
     await pool.query(
-      `INSERT INTO users (id, email, "passwordHash", name) VALUES ($1, $2, $3, $4)`,
+      `INSERT INTO users (id, email, "passwordHash", name, "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, NOW(), NOW())`,
       [id, DEMO_EMAIL, hash, DEMO_NAME],
     );
     console.log('OK: usuário demo criado');
@@ -296,7 +309,7 @@ async function seedCards(userId) {
       [userId, card.name],
     );
     if (exists.rowCount === 0) {
-      const id = `card-${card.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+      const id = `card-${userId.slice(0, 8)}-${card.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
       await pool.query(
         `INSERT INTO cards (id, "userId", name, color, closing_day, due_day, credit_limit, "createdAt", "updatedAt")
          VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,

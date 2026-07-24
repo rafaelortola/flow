@@ -8,6 +8,19 @@ const { seedDefaultCategories } = require('../lib/seed-user-defaults');
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 6;
 
+function registerErrorMessage(err) {
+  if (err.code === '23502') {
+    return 'Banco desatualizado para cadastro. Pare o servidor, rode npm run setup e depois npm start.';
+  }
+  if (err.code === 'ECONNREFUSED' || err.code === '57P01' || err.code === '28P01') {
+    return 'Não foi possível conectar ao PostgreSQL. Verifique o DATABASE_URL no .env.';
+  }
+  if (err.code === '42P01') {
+    return 'Tabelas não encontradas. Rode: npm run setup';
+  }
+  return 'Erro interno ao cadastrar. Pare o servidor, rode npm run setup e depois npm start.';
+}
+
 function authRoutes(jwtSecret, authMiddleware) {
   const router = express.Router();
 
@@ -30,7 +43,7 @@ function authRoutes(jwtSecret, authMiddleware) {
 
     try {
       const existing = await db.query(
-        `SELECT id FROM users WHERE email = $1 LIMIT 1`,
+        `SELECT id FROM users WHERE LOWER(email) = $1 LIMIT 1`,
         [trimmedEmail],
       );
       if (existing.rowCount > 0) {
@@ -40,9 +53,10 @@ function authRoutes(jwtSecret, authMiddleware) {
       const id = crypto.randomUUID();
       const passwordHash = await bcrypt.hash(password, 10);
 
+      // createdAt/updatedAt/theme explícitos: schema legado Prisma exige NOT NULL sem DEFAULT
       await db.query(
-        `INSERT INTO users (id, email, "passwordHash", name)
-         VALUES ($1, $2, $3, $4)`,
+        `INSERT INTO users (id, email, "passwordHash", name, theme, "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, $4, 'SYSTEM', NOW(), NOW())`,
         [id, trimmedEmail, passwordHash, trimmedName],
       );
 
@@ -66,8 +80,8 @@ function authRoutes(jwtSecret, authMiddleware) {
       if (err.code === '23505') {
         return res.status(409).json({ message: 'Este email já está cadastrado' });
       }
-      console.error('Erro no cadastro:', err.message);
-      res.status(500).json({ message: 'Erro interno ao cadastrar' });
+      console.error('Erro no cadastro:', err.code || '', err.message);
+      res.status(500).json({ message: registerErrorMessage(err) });
     }
   });
 
@@ -79,8 +93,8 @@ function authRoutes(jwtSecret, authMiddleware) {
 
     try {
       const result = await db.query(
-        `SELECT id, email, "passwordHash", name FROM users WHERE email = $1 LIMIT 1`,
-        [email.trim()],
+        `SELECT id, email, "passwordHash", name FROM users WHERE LOWER(email) = $1 LIMIT 1`,
+        [email.trim().toLowerCase()],
       );
       const user = result.rows[0];
       if (!user) {
