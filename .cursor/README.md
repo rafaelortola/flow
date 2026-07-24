@@ -21,7 +21,9 @@ Subagentes são assistentes especializados que o Agent principal pode delegar. C
 - Invocação: o Agent delega automaticamente quando relevante, ou peça explicitamente
 - Documentação: https://cursor.com/docs/subagents
 
-Exemplo incluído: `agents/revisor-financeflow.md`
+Exemplos incluídos:
+- `agents/revisor-financeflow.md` — revisão de código após alterações
+- `agents/revisao-valores.md` — auditoria de somatórias, Mensal e Parcelado
 
 ## Skills (`.cursor/skills/`)
 
@@ -31,7 +33,9 @@ Skills ensinam o Agent a executar tarefas específicas. Podem ser invocadas com 
 - Opcional: `scripts/`, `references/`, `assets/`
 - Documentação: https://cursor.com/docs/skills
 
-Exemplo incluído: `skills/controle-mensal/SKILL.md`
+Exemplos incluídos:
+- `skills/controle-mensal/SKILL.md` — Controle Mensal
+- `skills/revisao-valores/SKILL.md` — auditoria de valores (`npm run validate`)
 
 ## Regras (`.cursor/rules/`)
 
